@@ -1,4 +1,4 @@
-pacman::p_load(readxl, stars, geojsonsf, geojsonio, raster, tidyr, ggplot2, ggthemes, ggpubr, gdalUtils, sf, dplyr, tidycensus, tidyverse)
+pacman::p_load(readxl, nngeo, tigris, viridis, stars, geojsonsf, geojsonio, raster, tidyr, ggplot2, ggthemes, ggpubr, gdalUtils, sf, dplyr, tidycensus, tidyverse)
 
 options(scipen=999)
 
