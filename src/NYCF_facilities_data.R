@@ -1,4 +1,4 @@
-# source(".src/NYCF_housekeeping_GIS_vars.R")
+# source("src/NYCF_housekeeping_GIS_vars.R")
 
 facilities_data_points <- st_read("data/1_raw/Facilities_20210811.shp") %>%
   filter(FACSUBGRP %in% c("POLICE SERVICES", 

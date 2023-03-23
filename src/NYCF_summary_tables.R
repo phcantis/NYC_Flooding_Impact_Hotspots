@@ -1,4 +1,4 @@
-# source(".src/NYCF_housekeeping_GIS_vars.R")
+# source("src/NYCF_housekeeping_GIS_vars.R")
 
 ### Prepare summary NYC table for paper
 

@@ -1,4 +1,4 @@
-# source(".src/NYCF_housekeeping_GIS_vars.R")
+# source("src/NYCF_housekeeping_GIS_vars.R")
 
 # vars_ACS18 <- load_variables(2018, "acs5", cache = TRUE)
 
@@ -84,7 +84,8 @@ NYC_ACS2018 <- get_acs(geography = "block group", variables = vi_total_incomerat
                        geometry = TRUE) %>% 
   select(-c(variable, NAME.y, NAME.x, TRACTCE)) %>% 
   rename (!!paste0(vi_total_incomeratio[2], "_e") := estimate, !!paste0(vi_total_incomeratio[2], "_s") := moe) %>%
-  mutate(!!paste0(vi_total_incomeratio[2], "_s") := .data[[!!paste0(vi_total_incomeratio[2], "_s")]] / 1.645)
+  mutate(!!paste0(vi_total_incomeratio[2], "_s") := .data[[!!paste0(vi_total_incomeratio[2], "_s")]] / 1.645) %>% 
+  filter(ALAND > 10)
 
 for(var in acs_vars){
   

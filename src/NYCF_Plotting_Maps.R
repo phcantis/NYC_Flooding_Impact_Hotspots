@@ -1,4 +1,4 @@
-source(".src/NYCF_housekeeping_GIS_vars.R")
+source("src/NYCF_housekeeping_GIS_vars.R")
 
 CD <- st_read("data/1_raw/Community_Districts.shp") %>% 
   select(boro_cd) %>%
