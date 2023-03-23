@@ -1,4 +1,4 @@
-source(".src/NYCF_housekeeping_GIS_vars.R")
+# source("src/NYCF_housekeeping_GIS_vars.R")
 
 ### download census geoms and variables
 
@@ -37,45 +37,59 @@ vi_female80.84 <- c("P012048", "f_80_84")
 vi_female85 <- c("P012049", "f_85plus")
 
 variables_query <- list(vi_White,
-                  vi_Black,
-                  vi_Black_two_or_more,
-                  vi_Latinx,
-                  vi_Asian,
-                  vi_malemin5,
-                  vi_femalemin5,
-                  vi_male65.66,
-                  vi_male67.69,
-                  vi_male70.74,
-                  vi_male75.79,
-                  vi_male80.84,
-                  vi_male85,
-                  vi_female65.66,
-                  vi_female67.69,
-                  vi_female70.74,
-                  vi_female75.79,
-                  vi_female80.84,
-                  vi_female85)
+                        vi_Black,
+                        vi_Black_two_or_more,
+                        vi_Latinx,
+                        vi_Asian,
+                        vi_malemin5,
+                        vi_femalemin5,
+                        vi_male65.66,
+                        vi_male67.69,
+                        vi_male70.74,
+                        vi_male75.79,
+                        vi_male80.84,
+                        vi_male85,
+                        vi_female65.66,
+                        vi_female67.69,
+                        vi_female70.74,
+                        vi_female75.79,
+                        vi_female80.84,
+                        vi_female85)
 
 NYC_2010 <- get_decennial(geography = "block", variables = vi_Total[1],
                           keep_geo_vars = TRUE,
-                               state = "36", county = c("005", "047", "061", "081", "085"), year = 2010,
-                               geometry = TRUE) %>% select(-variable, -NAME) %>% rename (!!vi_Total[2] := value)
+                          state = "36", county = c("005", "047", "061", "081", "085"), year = 2010,
+                          geometry = TRUE) %>% select(-variable, -NAME) %>% rename (!!vi_Total[2] := value)
 
 for(var in variables_query){
-
+  
   print(var[2])
-
+  
   NYC_2010.temp <- get_decennial(geography = "block", variables = var[1],
-                           state = "36", county = c("005", "047", "061", "081", "085"), year = 2010) %>%
+                                 state = "36", county = c("005", "047", "061", "081", "085"), year = 2010) %>%
     select(-variable, -NAME) %>%
     rename (!!var[2] := value)
-
+  
   NYC_2010 <- left_join(NYC_2010, NYC_2010.temp)
-
+  
 }
 
 NYC_2010$b5 <- (NYC_2010$m_0_5 + NYC_2010$f_0_5)
 NYC_2010$a65 <- (NYC_2010$m_65_66 +
+                   NYC_2010$m_67_69 +
+                   NYC_2010$m_70_74 +
+                   NYC_2010$m_75_79 +
+                   NYC_2010$m_80_84 +
+                   NYC_2010$m_85plus +
+                   NYC_2010$f_65_66 +
+                   NYC_2010$f_67_69 +
+                   NYC_2010$f_70_74 +
+                   NYC_2010$f_75_79 +
+                   NYC_2010$f_80_84 +
+                   NYC_2010$f_85plus)
+
+NYC_2010$PCT_b5 <- 100 * (NYC_2010$m_0_5 + NYC_2010$f_0_5) / NYC_2010$Total
+NYC_2010$PCT_a65 <- 100 * (NYC_2010$m_65_66 +
                              NYC_2010$m_67_69 +
                              NYC_2010$m_70_74 +
                              NYC_2010$m_75_79 +
@@ -86,21 +100,7 @@ NYC_2010$a65 <- (NYC_2010$m_65_66 +
                              NYC_2010$f_70_74 +
                              NYC_2010$f_75_79 +
                              NYC_2010$f_80_84 +
-                             NYC_2010$f_85plus)
-
-NYC_2010$PCT_b5 <- 100 * (NYC_2010$m_0_5 + NYC_2010$f_0_5) / NYC_2010$Total
-NYC_2010$PCT_a65 <- 100 * (NYC_2010$m_65_66 +
-                       NYC_2010$m_67_69 +
-                       NYC_2010$m_70_74 +
-                       NYC_2010$m_75_79 +
-                       NYC_2010$m_80_84 +
-                       NYC_2010$m_85plus +
-                       NYC_2010$f_65_66 +
-                       NYC_2010$f_67_69 +
-                       NYC_2010$f_70_74 +
-                       NYC_2010$f_75_79 +
-                       NYC_2010$f_80_84 +
-                       NYC_2010$f_85plus) / NYC_2010$Total
+                             NYC_2010$f_85plus) / NYC_2010$Total
 
 NYC_2010$AfAm <- NYC_2010$Black + NYC_2010$Black_x2
 
@@ -109,7 +109,7 @@ NYC_2010$PCT_Afam <- 100 * (NYC_2010$Black + NYC_2010$Black_x2) / NYC_2010$Total
 NYC_2010$PCT_Hisp <- 100 * (NYC_2010$Latinx) / NYC_2010$Total
 NYC_2010$PC_Asian <- 100 * (NYC_2010$Asian) / NYC_2010$Total
 
-NYC_flooding_blocks <- filter(NYC_2010, ALAND10 >10) %>%
+NYC_flooding_blocks <- filter(NYC_2010, ALAND10 > 10) %>%
   st_transform(UTM_18N_meter)
 
 ## demographic assessment of flooded census blocks
@@ -123,9 +123,9 @@ NYC_flooding_blocks <- write_closest_flooding(NYC_flooding_blocks,
                                               "e_d_f")
 
 
-st_write(NYC_flooding_blocks, "data/2_intermediate/NYC_blocks_demo_flood.shp", delete_dsn = TRUE)
+st_write(NYC_flooding_blocks, "data/2_intermediate/NYC_blocks_CD_demo_flood.shp", delete_dsn = TRUE)
 
-NYC_flooding_blocks <- st_read("data/2_intermediate/NYC_blocks_demo_flood.shp")
+NYC_flooding_blocks <- st_read("data/2_intermediate/NYC_blocks_CD_demo_flood.shp")
 
 # ### join NYC blocks to CDs
 
@@ -134,4 +134,28 @@ NYC_flooding_blocks.joined.CDs <- st_join(NYC_flooding_blocks, CD_with_parks, la
   drop_na(boro_cd)
 
 st_write(NYC_flooding_blocks.joined.CDs, "data/2_intermediate/NYC_blocks_CD_demo_flood.shp", delete_dsn = TRUE)
-rm(list = ls())
+
+rm(fips_codes_NYS,
+   variables_query,
+   vi_Total,
+   vi_White,
+   vi_Black,
+   vi_Black_two_or_more,
+   vi_Latinx,
+   vi_Asian,
+   vi_malemin5,
+   vi_femalemin5,
+   vi_male65.66,
+   vi_male67.69,
+   vi_male70.74, 
+   vi_male75.79, 
+   vi_male80.84, 
+   vi_male85,
+   vi_female65.66, 
+   vi_female67.69, 
+   vi_female70.74, 
+   vi_female75.79,  
+   vi_female80.84, 
+   vi_female85,
+   NYC_2010,
+   NYC_flooding_blocks)

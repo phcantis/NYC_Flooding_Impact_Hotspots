@@ -1,3 +1,5 @@
+# source(".src/NYCF_housekeeping_GIS_vars.R")
+
 ### tax lots --> calculate min distance to each flooding scenario
 
 tax_lots_flooding <- st_read("data/1_raw/MapPLUTO.shp") %>%
@@ -36,3 +38,4 @@ tax_lots_flooding <- tax_lots_flooding %>%
                               TRUE ~ "No basement / Non residential lot"))
 
 st_write(tax_lots_flooding, "data/2_intermediate/tax_lots_CD_flood.shp", delete_dsn = TRUE)
+rm(tax_lots_flooding)

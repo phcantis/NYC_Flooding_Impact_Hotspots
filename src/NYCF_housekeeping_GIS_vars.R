@@ -1,4 +1,6 @@
-pacman::p_load(readxl, nngeo, tigris, viridis, stars, geojsonsf, geojsonio, raster, tidyr, ggplot2, ggthemes, ggpubr, gdalUtils, sf, dplyr, tidycensus, tidyverse)
+require("pacman")
+pacman::p_load(colorspace, readxl, stringr, nngeo, tigris, viridis, stars, geojsonsf, geojsonio, raster, tidyr, ggplot2, ggthemes, ggpubr, gdalUtils, sf, dplyr, tidycensus, tidyverse, GGally, plotly)
+
 
 options(scipen=999)
 
@@ -58,7 +60,7 @@ second_zero_NAs <- function(df){
   
 }
 
-quintile_label <- function(df, field_quantilize, positive=TRUE, stars=FALSE, drop_geom=TRUE){
+quintile_label <- function(df, field_quantilize, positive=TRUE, stars=FALSE, drop_geom=TRUE, NA_replace=0){
   
   if(stars==TRUE) {
     
@@ -70,10 +72,17 @@ quintile_label <- function(df, field_quantilize, positive=TRUE, stars=FALSE, dro
     
   if(drop_geom==TRUE){
     
-    df_aux <- (df[,field_quantilize]) %>% st_drop_geometry()
+    df_aux <- (df[,field_quantilize]) %>% 
+      st_drop_geometry() 
+    
+    df_aux[is.na(df_aux[,field_quantilize])] <- 0
     
   } else {
-    df_aux <- (df[,field_quantilize])}
+    df_aux <- (df[,field_quantilize]) 
+    
+    df_aux[is.na(df_aux[,field_quantilize])] <- 0
+    
+    }
     
     Q5 <- as.numeric(quantile(df_aux[,field_quantilize,] ,.8, na.rm = TRUE))
     Q4 <- as.numeric(quantile(df_aux[,field_quantilize,] ,.6, na.rm = TRUE))
@@ -267,4 +276,8 @@ st_dissolve <- function(sf_obj, field.var, cast_to="POLYGON"){
   
   return(dissolved)
   
+}
+
+sum_NONA <- function(x, na.rm.option=TRUE){
+  return(sum(x, na.rm = na.rm.option))
 }
