@@ -1406,7 +1406,7 @@ write.csv(final_table_NYC,
 gc()
 
 #### RUN THIS LINE TO SAVE AN NYC SUMMARY
-source(".src/NYCF_summary_tables.R")
+source("src/NYCF_summary_tables.R")
 
 ### NOW WE RUN THIS TO CREATE INDEX DATA FOR M AND E SCENARIOS
 
