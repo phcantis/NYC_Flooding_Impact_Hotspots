@@ -75,12 +75,12 @@ quintile_label <- function(df, field_quantilize, positive=TRUE, stars=FALSE, dro
     df_aux <- (df[,field_quantilize]) %>% 
       st_drop_geometry() 
     
-    df_aux[is.na(df_aux[,field_quantilize])] <- 0
+    df_aux[is.na(df_aux[,field_quantilize]),] <- NA_replace
     
   } else {
     df_aux <- (df[,field_quantilize]) 
     
-    df_aux[is.na(df_aux[,field_quantilize])] <- 0
+    df_aux[is.na(df_aux[,field_quantilize]),] <- NA_replace
     
     }
     
@@ -184,17 +184,26 @@ hotspot_classifier <- function(df, field_quantilize, threshold=0.8, positive=TRU
   
 }
 
-mapper_function_quintile <- function(data_df, fieldname, map_title, legend_position="none", title_size=36){
+mapper_function_quintile <- function(data_df, fieldname, map_title, legend_position="none", title_size=36, color_scheme = "blues"){
   
+  blues <- c("#CCE0EB", "#99C2D6", "#67A3C2","#3485AD", "#016699")
+  greens <- c("#EDEF5C", "#86c374ff", "#17A77E", "#258575ff", "#255668")
+  purples <- c("#F3935F", "#ec6879ff", "#E54787", "#aa338cff", "#4B1D91")
+  browns <- c("#FCFFC9", "#E8C167", "#D67500", "#913640", "#1D0B14")
+  
+  if(color_scheme == "blues") {style <- blues
+  } else if (color_scheme == "greens") {style <- greens
+  } else if (color_scheme == "purples") {style <- purples
+  } else if (color_scheme == "browns") {style <- browns}
   
   if(length(unique(quintile_label(data_df, fieldname)))== 5)  {
-    scale_palette <- c("#CCE0EB", "#99C2D6", "#67A3C2","#3485AD", "#016699")
+    scale_palette <- style
   } else if (length(unique(quintile_label(data_df, fieldname)))== 4) {
-    scale_palette <- c("#CCE0EB", "#99C2D6","#3485AD", "#016699")
+    scale_palette <- style[-3]
   } else if (length(unique(quintile_label(data_df, fieldname)))== 3) {
-    scale_palette <- c("#CCE0EB", "#67A3C2","#016699")
+    scale_palette <- c(style[1], style[3], style[5])
   } else if (length(unique(quintile_label(data_df, fieldname)))== 2) {
-    scale_palette <- c("#CCE0EB", "#016699")
+    scale_palette <- c(style[1], style[5])
   }
   
   plot <- ggplot() +
@@ -209,20 +218,29 @@ mapper_function_quintile <- function(data_df, fieldname, map_title, legend_posit
   
 }
 
-mapper_function_equal_breaks <- function(data_df, fieldname, map_title, legend_position="none", title_size=36, n_breaks=5){
+mapper_function_equal_breaks <- function(data_df, fieldname, map_title, legend_position="none", title_size=36, n_breaks=5, color_scheme = "blues"){
   
+  blues <- c("#CCE0EB", "#99C2D6", "#67A3C2","#3485AD", "#016699")
+  greens <- c("#EDEF5C", "#86c374ff", "#17A77E", "#258575ff", "#255668")
+  purples <- c("#F3935F", "#ec6879ff", "#E54787", "#aa338cff", "#4B1D91")
+  browns <- c("#FCFFC9", "#E8C167", "#D67500", "#913640", "#1D0B14")
+  
+  if(color_scheme == "blues") {style <- blues
+  } else if (color_scheme == "greens") {style <- greens
+  } else if (color_scheme == "purples") {style <- purples
+  } else if (color_scheme == "browns") {style <- browns}
   
   if(n_breaks == 5)  {
-    scale_palette <- c("#CCE0EB", "#99C2D6", "#67A3C2","#3485AD", "#016699")
+    scale_palette <- style
     my_breaks <- c(0, 0.2, 0.4, 0.6, 0.8, 1)
   } else if (n_breaks == 4) {
-    scale_palette <- c("#CCE0EB", "#99C2D6","#3485AD", "#016699")
+    scale_palette <- style[-3]
     my_breaks <- c(0, 0.25, 0.5, 0.75)
   } else if (n_breaks== 3) {
-    scale_palette <- c("#CCE0EB", "#67A3C2","#016699")
+    scale_palette <- c(style[1], style[3], style[5])
     my_breaks <- c(0, 0.33, 0.4)
   } else if (n_breaks == 2) {
-    scale_palette <- c("#CCE0EB", "#016699")
+    scale_palette <- cc(style[1], style[5])
     my_breaks <- c(0, 0.5)
   }
   
@@ -245,7 +263,17 @@ mapper_function_equal_breaks <- function(data_df, fieldname, map_title, legend_p
   
 }
 
-mapper_legender_frame <- function(data_df, fieldname, legend_position="top", text_size=25, text_title_size=30, legend_name="Quintile", key_size_cm=1.5, div_quint=1){
+mapper_legender_frame <- function(data_df, fieldname, legend_position="top", text_size=25, text_title_size=30, legend_name="Quintile", key_size_cm=1.5, div_quint=1, color_scheme = "blues"){
+  
+  blues <- c("#CCE0EB", "#99C2D6", "#67A3C2","#3485AD", "#016699")
+  greens <- c("#EDEF5C", "#86c374ff", "#17A77E", "#258575ff", "#255668")
+  purples <- c("#F3935F", "#ec6879ff", "#E54787", "#aa338cff", "#4B1D91")
+  browns <- c("#FCFFC9", "#E8C167", "#D67500", "#913640", "#1D0B14")
+  
+  if(color_scheme == "blues") {style <- blues
+  } else if (color_scheme == "greens") {style <- greens
+  } else if (color_scheme == "purples") {style <- purples
+  } else if (color_scheme == "browns") {style <- browns}
   
   plotted_legend <- ggplot() +
   geom_sf(data = data_df, aes(fill = factor(quintile_label(data_df, fieldname)/div_quint))) +
@@ -255,7 +283,7 @@ mapper_legender_frame <- function(data_df, fieldname, legend_position="top", tex
         legend.key.size = unit(key_size_cm, "cm"),
         legend.text = element_text(size =  text_size),
         legend.title = element_text(size = text_title_size, face = "bold")) +
-  scale_fill_manual(values = c("#CCE0EB", "#99C2D6", "#67A3C2","#3485AD", "#016699"), name= "Quintile", 
+  scale_fill_manual(values = style, name= "Quintile", 
                     guide=guide_legend(reverse=T))
   
   return(plotted_legend)

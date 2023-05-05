@@ -252,7 +252,7 @@ for(facility_cat in facility_categories){
   
   for(comdist in final_table$Geography){
     
-    sliced_catfac_CD <- sliced_catfac[sliced_catfac$CD == comdist,]
+    sliced_catfac_CD <- sliced_catfac[sliced_catfac$boro_cd == comdist,]
     
     total_nr_facility <- nrow(sliced_catfac_CD)
     M.Flooded_nr_facility <-nrow(sliced_catfac_CD[sliced_catfac_CD$m_d_f <= 30,])
@@ -294,7 +294,7 @@ for(facility_subgrp in facility_subgroups){
   
   for(comdist in final_table$Geography){
     
-    sliced_facsbgrp_CD <- sliced_facsbgrp[sliced_facsbgrp$CD == comdist,]
+    sliced_facsbgrp_CD <- sliced_facsbgrp[sliced_facsbgrp$boro_cd == comdist,]
     
     total_nr_subgrp <- nrow(sliced_facsbgrp_CD)
     M.Flooded_nr_subgrp <-nrow(sliced_facsbgrp_CD[sliced_facsbgrp_CD$m_d_f <= 30,])
