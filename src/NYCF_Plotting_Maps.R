@@ -198,24 +198,24 @@ ggsave(filename = "data/4_display/maps/E.HS.Agg_sovi.png",
 
 ### CD level MAPS per categories 
 
-Map.Legend_LUSE <- mapper_legender_frame(data_df = final_table_sf, fieldname = "M.PCT_industrial_lots", legend_position = "top")
-Map.Legend_LEFT <- mapper_legender_frame(data_df = final_table_sf, fieldname = "M.PCT_road_area", legend_position = c(0.1,0.5), key_size_cm = 3, text_title_size = 50, text_size = 40)
+Map.Legend_LUSE <- mapper_legender_frame(data_df = final_table_sf, fieldname = "M.PCT_industrial_lots", legend_position = "top", color_scheme = "greens")
+Map.Legend_LEFT <- mapper_legender_frame(data_df = final_table_sf, fieldname = "M.PCT_road_area", legend_position = c(0.1,0.5), key_size_cm = 3, text_title_size = 50, text_size = 40, color_scheme = "greens")
 
 ## Population & LAND USE 
-M.Map.P_population <- mapper_function_quintile(final_table_sf, "M.PCT_Total_population", "% Population Impacted", "none")
+M.Map.P_population <- mapper_function_quintile(final_table_sf, "M.PCT_Total_population", "% Population Impacted", "none", color_scheme = "purples")
 
-M.Map.P_Res_Flooded <- mapper_function_quintile(final_table_sf, "M.PCT_residential_lots", "% Residential Lots Impacted", "none")
+M.Map.P_Res_Flooded <- mapper_function_quintile(final_table_sf, "M.PCT_residential_lots", "% Residential Lots Impacted", "none", color_scheme = "greens")
 
-M.Map.P_ResBsmnt_Flooded <- mapper_function_quintile(final_table_sf, "M.PCT_basement_residential_lots", "% Residential Lots with a \n Basement Impacted", "none")
+M.Map.P_ResBsmnt_Flooded <- mapper_function_quintile(final_table_sf, "M.PCT_basement_residential_lots", "% Residential Lots with a \n Basement Impacted", "none", color_scheme = "greens")
 
-M.Map.P_Mixed_Flooded <- mapper_function_quintile(final_table_sf, "M.PCT_mixed_comres_lots", "% Mixed Residential/Commercial \n Lots Impacted", "none")
+M.Map.P_Mixed_Flooded <- mapper_function_quintile(final_table_sf, "M.PCT_mixed_comres_lots", "% Mixed Residential/Commercial \n Lots Impacted", "none", color_scheme = "greens")
 
-M.Map.P_Commercial_Flooded <- mapper_function_quintile(final_table_sf, "M.PCT_commercial_lots", "% Commercial Lots Impacted", "none")
+M.Map.P_Commercial_Flooded <- mapper_function_quintile(final_table_sf, "M.PCT_commercial_lots", "% Commercial Lots Impacted", "none", color_scheme = "greens")
 
-M.Map.P_Industrial_Flooded <- mapper_function_quintile(final_table_sf, "M.PCT_industrial_lots", "% Industrial Lots Impacted", "none")
+M.Map.P_Industrial_Flooded <- mapper_function_quintile(final_table_sf, "M.PCT_industrial_lots", "% Industrial Lots Impacted", "none", color_scheme = "greens")
 
-M.AGGREGATE_LUSE <- mapper_function_equal_breaks(final_table_sf, fieldname = "M.HS.Agg_landuse", map_title = "Land Use \nHotspot Score", legend_position = "none", n_breaks = 5)
-M.AGGREGATE_POP <- mapper_function_equal_breaks(final_table_sf, fieldname = "M.HS.Agg_population", map_title = "Population \nHotspot Score", legend_position = c(0.99,0.2), n_breaks = 5)
+M.AGGREGATE_LUSE <- mapper_function_equal_breaks(final_table_sf, fieldname = "M.HS.Agg_landuse", map_title = "Land Use \nHotspot Score", legend_position = "none", n_breaks = 5, color_scheme = "greens")
+M.AGGREGATE_POP <- mapper_function_equal_breaks(final_table_sf, fieldname = "M.HS.Agg_population", map_title = "Population \nHotspot Score", legend_position = c(0.99,0.2), n_breaks = 5, color_scheme = "purples")
 
 frame <- ggarrange(M.Map.P_Res_Flooded,
                    M.Map.P_ResBsmnt_Flooded, 
@@ -225,21 +225,21 @@ frame <- ggarrange(M.Map.P_Res_Flooded,
                    Map.Legend_LEFT,
                    nrow = 3, ncol = 2, 
                    common.legend = FALSE) %>%
-  annotate_figure(top = text_grob("\n Land Use Exposure and Population Indicators Per Community District \n Moderate Scenario \n", 
+  annotate_figure(top = text_grob("\n Land Use Exposure Indicators Per Community District \n Moderate Scenario \n", 
                                   color = "black", face = "bold", size = 50))
 
-frame %>% ggexport(filename = "data/4_display/maps/maps_LU_exposure.png", 
+frame %>% ggexport(filename = "data/4_display/maps/moderate/maps_LU_exposure.png", 
                    width = 1800, 
                    height = 2400) 
 
 ## Transport
 
-Map.P_Road_Flooded <- mapper_function_quintile(final_table_sf, "M.Flooded PCT road", "% Road Area Flooded", "none")
-Map.P_Bus_Stops_Flooded <- mapper_function_quintile(final_table_sf, "M.Flooded PCT bus stops", "% Bus Stops Impacted", "none")
-Map.P_Bus_Routes_Flooded <- mapper_function_quintile(final_table_sf, "M.Flooded PCT bus routes", "% Bus Routes Impacted", "none")
-Map.P_Subway_Entrances_Flooded <- mapper_function_quintile(final_table_sf, "M.Flooded PCT subway entrances", "% Subway Entrances Impacted", "none")
+Map.P_Road_Flooded <- mapper_function_quintile(final_table_sf, "M.PCT_road_area", "% Road Area Flooded", "none", color_scheme = "greens")
+Map.P_Bus_Stops_Flooded <- mapper_function_quintile(final_table_sf, "M.PCT_bus_stops", "% Bus Stops Impacted", "none", color_scheme = "greens")
+Map.P_Bus_Routes_Flooded <- mapper_function_quintile(final_table_sf, "M.PCT_bus_routes", "% Bus Routes Impacted", "none", color_scheme = "greens")
+Map.P_Subway_Entrances_Flooded <- mapper_function_quintile(final_table_sf, "M.PCT_subway_stops", "% Subway Entrances Impacted", "none", color_scheme = "greens")
 
-AGGREGATE_TRANSPORT <- mapper_function_equal_breaks(final_table_sf, "agg_hs_transport", "Transport \nHotspot Score", "right")
+M.AGGREGATE_TRANSPORT <- mapper_function_equal_breaks(final_table_sf, "M.HS.Agg_transport", "Transport \nHotspot Score", "right", color_scheme = "greens")
 
 frame <- ggarrange(Map.P_Road_Flooded,
                    Map.P_Bus_Stops_Flooded, 
@@ -251,69 +251,73 @@ frame <- ggarrange(Map.P_Road_Flooded,
   annotate_figure(top = text_grob("\n Transportation Exposure Indicators Per Community District \n Moderate Scenario \n", 
                                   color = "black", face = "bold", size = 50))
 
-frame %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/maps_Transport_exposure.png", 
+frame %>% ggexport(filename = "data/4_display/maps/moderate/maps_Transport_exposure.png", 
                    width = 2200, 
                    height = 3200) 
 
 ## SOVI
-Map.P_bel_5 <- mapper_function_quintile(final_table_sf, "M.Flooded PCT 0-5 children", "% Below 5 Years Old", "none")
-Map.P_above_65 <- mapper_function_quintile(final_table_sf, "M.Flooded PCT +65 elder", "% Above 65 Years Old", "none")
-Map.P_BIPOC <- mapper_function_quintile(final_table_sf, "M.pct_BIPOC", "% BIPOC", "none")
-Map.P_below_poverty <- mapper_function_quintile(final_table_sf, "M.Pov_rate_e", "% Below the Poverty Line", "none")
-Map.P_no_car <- mapper_function_quintile(final_table_sf, "M.PCT_No_Car_e", "% Households Without a Car", "none")
-Map.P_rented_hh <- mapper_function_quintile(final_table_sf, "M.PCT_rented_e", "% Rented Households", "none")
+Map.P_bel_5 <- mapper_function_quintile(final_table_sf, "M.PCT_below5_population", "% Below 5 Years Old", "none", color_scheme = "browns")
+Map.P_above_65 <- mapper_function_quintile(final_table_sf, "M.PCT_above65_population", "% Above 65 Years Old", "none", color_scheme = "browns")
+Map.P_BIPOC <- mapper_function_quintile(final_table_sf, "M.PCT_bipoc_population", "% BIPOC", "none", color_scheme = "browns")
+Map.P_below_poverty <- mapper_function_quintile(final_table_sf, "M.PCT_Belpov_e", "% Below the Poverty Line", "none", color_scheme = "browns")
+Map.P_disability <- mapper_function_quintile(final_table_sf, "M.PCT_Disability_e", "% With a Disability", "none", color_scheme = "browns")
+Map.P_Income75K <- mapper_function_quintile(final_table_sf, "M.PCT_HH_Income_Bel75K_e", "% Household Income Below $75K", "none", color_scheme = "browns")
+Map.P_cost_burdened <- mapper_function_quintile(final_table_sf, "M.PCT_CB_e", "% Cost-Burdened Households", "none", color_scheme = "browns")
+Map.P_rent_burdened <- mapper_function_quintile(final_table_sf, "M.PCT_RB_e", "% Rent-Burdened Households", "none", color_scheme = "browns")
 
-AGGREGATE_SOVI <- mapper_function_equal_breaks(final_table_sf, "agg_hs_sovi", "Social Vulnerability \nHotspot Score", "right")
+
+M.AGGREGATE_SOVI <- mapper_function_equal_breaks(final_table_sf, "M.HS.Agg_sovi", "Social Vulnerability \nHotspot Score", "right", color_scheme = "browns")
 
 
 frame <- ggarrange(Map.P_BIPOC, 
                    Map.P_bel_5,
                    Map.P_above_65,
                    Map.P_below_poverty,
-                   Map.P_no_car,
-                   Map.P_rented_hh,
-                   Map.Legend_LUSE,
-                   nrow = 4, ncol = 2,
+                   Map.P_disability,
+                   Map.P_Income75K,
+                   Map.P_cost_burdened,
+                   Map.P_rent_burdened,
+                   mapper_legender_frame(data_df = final_table_sf, fieldname = "M.PCT_industrial_lots", legend_position = "top", color_scheme = "browns"),
+                   nrow = 5, ncol = 2,
                    common.legend = FALSE) %>%
   annotate_figure(top = text_grob("\n Social Vulnerability Indicators Per Community District \n Moderate Scenario \n", 
                                   color = "black", face = "bold", size = 50))
 
-frame %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/maps_SV.png", 
+frame %>% ggexport(filename = "data/4_display/maps/moderate/maps_SV.png", 
                    width = 1800, 
                    height = 3600) 
 
 ### PUBLIC SAFETY
 
-Map.P_POLICE <- mapper_function_quintile(final_table_sf, "M.Flooded PCT of POLICE SERVICES facilities", "% Police Services", "none")
-Map.P_FIRE <- mapper_function_quintile(final_table_sf, "M.Flooded PCT of FIRE SERVICES facilities", "% Fire Services", "none")
-Map.P_OTHER_EMERGENCY <- mapper_function_quintile(final_table_sf, "M.Flooded PCT of OTHER SAFETY AND EMERGENCY FACILITIES facilities", "% Other Safety And Emergency \nmanagement Services", "none")
+Map.P_POLICE <- mapper_function_quintile(final_table_sf, "M.PCT_POLICE_SERVICES_facilities", "% Police Services", "none", color_scheme = "greens")
+Map.P_FIRE <- mapper_function_quintile(final_table_sf, "M.PCT_FIRE_SERVICES_facilities", "% Fire Services", "none", color_scheme = "greens")
+Map.P_OTHER_EMERGENCY <- mapper_function_quintile(final_table_sf, "M.PCT_OTHER_SAFETY_AND_EMERGENCY_FACILITIES_facilities", "% Other Safety And Emergency \nmanagement Services", "none", color_scheme = "greens")
 
-
-AGGREGATE_PSAFETY <- mapper_function_equal_breaks(final_table_sf, "agg_hs_psafety", "Public Safety Facilities \nHotspot Score", "right")
+M.AGGREGATE_PSAFETY <- mapper_function_equal_breaks(final_table_sf, "M.HS.Agg_psafety", "Public Safety Facilities \nHotspot Score", "right", color_scheme = "greens")
 
 frame <- ggarrange(Map.P_POLICE, 
                    Map.P_FIRE,
                    Map.P_OTHER_EMERGENCY,
-                   Map.Legend_TRANSPORT,
+                   Map.Legend_LEFT,
                    nrow = 2, ncol = 2,
                    common.legend = FALSE) %>%
   annotate_figure(top = text_grob("\n Impact of Flooding on Public Safety Facilities Per Community District \n Moderate Scenario \n", 
                                   color = "black", face = "bold", size = 50))
 
-frame %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/maps_PS.png", 
+frame %>% ggexport(filename = "data/4_display/maps/moderate/maps_PS.png", 
                    width = 1800, 
                    height = 2700) 
 
 ### HEALTHCARE
 
-Map.P_HospitalsClinics <- mapper_function_quintile(final_table_sf, "M.Flooded PCT of HOSPITALS AND CLINICS facilities", "% Hospitals and Clinics", "none")
-Map.P_ResidentialHCare <- mapper_function_quintile(final_table_sf, "M.Flooded PCT of RESIDENTIAL HEALTH CARE facilities", "% Residential Healtchare Facilities", "none")
-Map.P_MentalHealth <- mapper_function_quintile(final_table_sf, "M.Flooded PCT of MENTAL HEALTH, HEALTH PROMOTION, AND CHEMICAL DEPENDENCY SERVICES facilities", "% Mental Health and \nChemical Dependency Facilities", "none")
-Map.P_OtherHealthCare <- mapper_function_quintile(final_table_sf, "M.Flooded PCT of OTHER HEALTH CARE facilities", "% Other Healthcare Facilities", "none")
+Map.P_HospitalsClinics <- mapper_function_quintile(final_table_sf, "M.PCT_HOSPITALS_AND_CLINICS_facilities", "% Hospitals and Clinics", "none", color_scheme = "greens")
+Map.P_ResidentialHCare <- mapper_function_quintile(final_table_sf, "M.PCT_RESIDENTIAL_HEALTH_CARE_facilities", "% Residential Healtchare Facilities", "none", color_scheme = "greens")
+Map.P_MentalHealth <- mapper_function_quintile(final_table_sf, "M.PCT_MENTAL_HEALTH_HEALTH_PROMOTION_AND_CHEMICAL_DEPENDENCY_SERVICES_facilities", "% Mental Health and \nChemical Dependency Facilities", "none", color_scheme = "greens")
+Map.P_OtherHealthCare <- mapper_function_quintile(final_table_sf, "M.PCT_OTHER_HEALTH_CARE_facilities", "% Other Healthcare Facilities", "none", color_scheme = "greens")
 
 
 
-AGGREGATE_HEALTHCARE <- mapper_function_equal_breaks(final_table_sf, "agg_hs_healthcare", "Healthcare Facilities \nHotspot Score", "right")
+M.AGGREGATE_HEALTHCARE <- mapper_function_equal_breaks(final_table_sf, "M.HS.Agg_healthcare", "Healthcare Facilities \nHotspot Score", "right", color_scheme = "greens")
 
 frame <- ggarrange(Map.P_HospitalsClinics, 
                    Map.P_ResidentialHCare,
@@ -325,19 +329,19 @@ frame <- ggarrange(Map.P_HospitalsClinics,
   annotate_figure(top = text_grob("\n Impact of Flooding on Healthcare Facilities Per Community District \n Moderate Scenario \n", 
                                   color = "black", face = "bold", size = 50))
 
-frame %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/maps_HC.png", 
+frame %>% ggexport(filename = "data/4_display/maps/moderate/maps_HC.png", 
                    width = 1800, 
                    height = 3600) 
 
 ### WELFARE
 
-Map.P_HumanDev <- mapper_function_quintile(final_table_sf, "M.Flooded PCT of HUMAN DEVELOPMENT SERVICES facilities", "% Human Development Facilities", "none")
-Map.P_Senior <- mapper_function_quintile(final_table_sf, "M.Flooded PCT of SENIOR AND DISSABILITY SERVICES facilities", "% Senior and Disability Services", "none")
-Map.P_HousingFood <- mapper_function_quintile(final_table_sf, "M.Flooded PCT of HOUSING AND FOOD SERVICES facilities", "% Housing and Food Services", "none")
-Map.P_ChildWelfare <- mapper_function_quintile(final_table_sf, "M.Flooded PCT of CHILD SERVICES AND WELFARE SERVICES facilities", "% Child Services \nand Welfare Facilities", "none")
+Map.P_HumanDev <- mapper_function_quintile(final_table_sf, "M.PCT_HUMAN_DEVELOPMENT_SERVICES_facilities", "% Human Development Facilities", "none", color_scheme = "greens")
+Map.P_Senior <- mapper_function_quintile(final_table_sf, "M.PCT_SENIOR_AND_DISSABILITY_SERVICES_facilities", "% Senior and Disability Services", "none", color_scheme = "greens")
+Map.P_HousingFood <- mapper_function_quintile(final_table_sf, "M.PCT_HOUSING_AND_FOOD_SERVICES_facilities", "% Housing and Food Services", "none", color_scheme = "greens")
+Map.P_ChildWelfare <- mapper_function_quintile(final_table_sf, "M.PCT_CHILD_SERVICES_AND_WELFARE_SERVICES_facilities", "% Child Services \nand Welfare Facilities", "none", color_scheme = "greens")
 
 
-AGGREGATE_WELFARE <- mapper_function_equal_breaks(final_table_sf, "agg_hs_welfare", "Welfare Facilities \nHotspot Score", "right")
+M.AGGREGATE_WELFARE <- mapper_function_equal_breaks(final_table_sf, "M.HS.Agg_welfare", "Welfare Facilities \nHotspot Score", "right", color_scheme = "greens")
 
 frame <- ggarrange(Map.P_HumanDev, 
                    Map.P_Senior,
@@ -349,18 +353,18 @@ frame <- ggarrange(Map.P_HumanDev,
   annotate_figure(top = text_grob("\n Impact of Flooding on Welfare Facilities Per Community District \n Moderate Scenario \n", 
                                   color = "black", face = "bold", size = 50))
 
-frame %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/maps_WF.png", 
+frame %>% ggexport(filename = "data/4_display/maps/moderate/maps_WF.png", 
                    width = 1800, 
                    height = 2700)
 
 ### EDUCATION
 
-Map.P_K12 <- mapper_function_quintile(final_table_sf, "M.Flooded PCT of K-12 EDUCATION SERVICES facilities", "% K-12 Education Facilities", "none")
-Map.P_DayCare <- mapper_function_quintile(final_table_sf, "M.Flooded PCT of DAY CARE AND PRE-KINDERGARTEN facilities", "% Pre-K / Day Care \nEducation Facilities", "none")
-Map.P_Higher <- mapper_function_quintile(final_table_sf, "M.Flooded PCT of COLLEGES OR UNIVERSITIES facilities", "% Higher Education Facilities", "none")
-Map.P_Proprietary <- mapper_function_quintile(final_table_sf, "M.Flooded PCT of PROPRIETARY SCHOOLS facilities", "% Proprietary Education Facilities", "none")
+Map.P_K12 <- mapper_function_quintile(final_table_sf, "M.PCT_K12_EDUCATION_SERVICES_facilities", "% K-12 Education Facilities", "none", color_scheme = "greens")
+Map.P_DayCare <- mapper_function_quintile(final_table_sf, "M.PCT_DAY_CARE_AND_PREKINDERGARTEN_facilities", "% Pre-K / Day Care \nEducation Facilities", "none", color_scheme = "greens")
+Map.P_Higher <- mapper_function_quintile(final_table_sf, "M.PCT_COLLEGES_OR_UNIVERSITIES_facilities", "% Higher Education Facilities", "none", color_scheme = "greens")
+Map.P_Proprietary <- mapper_function_quintile(final_table_sf, "M.PCT_PROPRIETARY_SCHOOLS_facilities", "% Proprietary Education Facilities", "none", color_scheme = "greens")
 
-AGGREGATE_EDUCATION <- mapper_function_equal_breaks(final_table_sf, "agg_hs_education", "Education Facilities \nIndex", "right")
+M.AGGREGATE_EDUCATION <- mapper_function_equal_breaks(final_table_sf, "M.HS.Agg_education", "Education Facilities \nIndex", "right", color_scheme = "greens")
 
 frame <- ggarrange(Map.P_K12, 
                    Map.P_DayCare,
@@ -372,33 +376,237 @@ frame <- ggarrange(Map.P_K12,
   annotate_figure(top = text_grob("\n Impact of Flooding on Welfare Facilities Per Community District \n Moderate Scenario \n", 
                                   color = "black", face = "bold", size = 50))
 
-frame %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/maps_ED.png", 
+frame %>% ggexport(filename = "data/4_display/maps/moderate/maps_ED.png", 
                    width = 1800, 
                    height = 2700)
 
-final_table_sf$infra_hotspots_sum <- round(final_table_sf$agg_hs_landuse +
-                                             final_table_sf$agg_hs_transport +
-                                             final_table_sf$agg_hs_education +
-                                             final_table_sf$agg_hs_welfare +
-                                             final_table_sf$agg_hs_psafety +
-                                             final_table_sf$agg_hs_healthcare,2)
+final_table_sf$infra_hotspots_sum <- round(final_table_sf$M.HS.Agg_landuse +
+                                             final_table_sf$M.HS.Agg_transport +
+                                             final_table_sf$M.HS.Agg_education +
+                                             final_table_sf$M.HS.Agg_welfare +
+                                             final_table_sf$M.HS.Agg_psafety +
+                                             final_table_sf$M.HS.Agg_healthcare,2)
 
 final_table_sf$infra_hotspots_sum_n <- normalize(final_table_sf$infra_hotspots_sum) %>%
   round(2)
 
-frame <- ggarrange(AGGREGATE_LUSE,
-                   AGGREGATE_TRANSPORT,
-                   AGGREGATE_EDUCATION,
-                   AGGREGATE_HEALTHCARE,
-                   AGGREGATE_WELFARE,
-                   AGGREGATE_PSAFETY,
+frame <- ggarrange(M.AGGREGATE_LUSE,
+                   M.AGGREGATE_TRANSPORT,
+                   M.AGGREGATE_EDUCATION,
+                   M.AGGREGATE_HEALTHCARE,
+                   M.AGGREGATE_WELFARE,
+                   M.AGGREGATE_PSAFETY,
                    nrow = 3, ncol = 2,
                    common.legend = FALSE) %>%
   annotate_figure(top = text_grob("\n Hotspot Scores Per Infrastructure Risk Category Per Community District \n Moderate Scenario \n", 
                                   color = "black", face = "bold", size = 70))
 
-frame %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/infra_maps_ALL_HOTSPOTS.png", 
-                   width = 3600, 
+frame %>% ggexport(filename = "data/4_display/maps/moderate/infra_maps_ALL_HOTSPOTS.png", 
+                   width = 2800, 
+                   height = 3600)
+
+### LETS DO IT WITH THE EXTREME SCENARIO NOW
+
+## Population & LAND USE 
+E.Map.P_population <- mapper_function_quintile(final_table_sf, "E.PCT_Total_population", "% Population Impacted", "none", color_scheme = "purples")
+
+E.Map.P_Res_Flooded <- mapper_function_quintile(final_table_sf, "E.PCT_residential_lots", "% Residential Lots Impacted", "none", color_scheme = "greens")
+
+E.Map.P_ResBsmnt_Flooded <- mapper_function_quintile(final_table_sf, "E.PCT_basement_residential_lots", "% Residential Lots with a \n Basement Impacted", "none", color_scheme = "greens")
+
+E.Map.P_Mixed_Flooded <- mapper_function_quintile(final_table_sf, "E.PCT_mixed_comres_lots", "% Mixed Residential/Commercial \n Lots Impacted", "none", color_scheme = "greens")
+
+E.Map.P_Commercial_Flooded <- mapper_function_quintile(final_table_sf, "E.PCT_commercial_lots", "% Commercial Lots Impacted", "none", color_scheme = "greens")
+
+E.Map.P_Industrial_Flooded <- mapper_function_quintile(final_table_sf, "E.PCT_industrial_lots", "% Industrial Lots Impacted", "none", color_scheme = "greens")
+
+E.AGGREGATE_LUSE <- mapper_function_equal_breaks(final_table_sf, fieldname = "E.HS.Agg_landuse", map_title = "Land Use \nHotspot Score", legend_position = "none", n_breaks = 5, color_scheme = "greens")
+E.AGGREGATE_POP <- mapper_function_equal_breaks(final_table_sf, fieldname = "E.HS.Agg_population", map_title = "Population \nHotspot Score", legend_position = c(0.99,0.2), n_breaks = 5, color_scheme = "purples")
+
+frame <- ggarrange(E.Map.P_Res_Flooded,
+                   E.Map.P_ResBsmnt_Flooded, 
+                   E.Map.P_Mixed_Flooded,
+                   E.Map.P_Commercial_Flooded,
+                   E.Map.P_Industrial_Flooded,
+                   Map.Legend_LEFT,
+                   nrow = 3, ncol = 2, 
+                   common.legend = FALSE) %>%
+  annotate_figure(top = text_grob("\n Land Use Exposure Indicators Per Community District \n Extreme Scenario \n", 
+                                  color = "black", face = "bold", size = 50))
+
+frame %>% ggexport(filename = "data/4_display/maps/extreme/maps_LU_exposure.png", 
+                   width = 1800, 
+                   height = 2400) 
+
+## Transport
+
+Map.P_Road_Flooded <- mapper_function_quintile(final_table_sf, "E.PCT_road_area", "% Road Area Flooded", "none", color_scheme = "greens")
+Map.P_Bus_Stops_Flooded <- mapper_function_quintile(final_table_sf, "E.PCT_bus_stops", "% Bus Stops Impacted", "none", color_scheme = "greens")
+Map.P_Bus_Routes_Flooded <- mapper_function_quintile(final_table_sf, "E.PCT_bus_routes", "% Bus Routes Impacted", "none", color_scheme = "greens")
+Map.P_Subway_Entrances_Flooded <- mapper_function_quintile(final_table_sf, "E.PCT_subway_stops", "% Subway Entrances Impacted", "none", color_scheme = "greens")
+
+E.AGGREGATE_TRANSPORT <- mapper_function_equal_breaks(final_table_sf, "E.HS.Agg_transport", "Transport \nHotspot Score", "right", color_scheme = "greens")
+
+frame <- ggarrange(Map.P_Road_Flooded,
+                   Map.P_Bus_Stops_Flooded, 
+                   Map.P_Bus_Routes_Flooded,
+                   Map.P_Subway_Entrances_Flooded,
+                   Map.Legend_LUSE,
+                   nrow = 3, ncol = 2, 
+                   common.legend = FALSE) %>%
+  annotate_figure(top = text_grob("\n Transportation Exposure Indicators Per Community District \n Extreme Scenario \n", 
+                                  color = "black", face = "bold", size = 50))
+
+frame %>% ggexport(filename = "data/4_display/maps/extreme/maps_Transport_exposure.png", 
+                   width = 2200, 
+                   height = 3200) 
+
+## SOVI
+Map.P_bel_5 <- mapper_function_quintile(final_table_sf, "E.PCT_below5_population", "% Below 5 Years Old", "none", color_scheme = "browns")
+Map.P_above_65 <- mapper_function_quintile(final_table_sf, "E.PCT_above65_population", "% Above 65 Years Old", "none", color_scheme = "browns")
+Map.P_BIPOC <- mapper_function_quintile(final_table_sf, "E.PCT_bipoc_population", "% BIPOC", "none", color_scheme = "browns")
+Map.P_below_poverty <- mapper_function_quintile(final_table_sf, "E.PCT_Belpov_e", "% Below the Poverty Line", "none", color_scheme = "browns")
+Map.P_disability <- mapper_function_quintile(final_table_sf, "E.PCT_Disability_e", "% With a Disability", "none", color_scheme = "browns")
+Map.P_Income75K <- mapper_function_quintile(final_table_sf, "E.PCT_HH_Income_Bel75K_e", "% Household Income Below $75K", "none", color_scheme = "browns")
+Map.P_cost_burdened <- mapper_function_quintile(final_table_sf, "E.PCT_CB_e", "% Cost-Burdened Households", "none", color_scheme = "browns")
+Map.P_rent_burdened <- mapper_function_quintile(final_table_sf, "E.PCT_RB_e", "% Rent-Burdened Households", "none", color_scheme = "browns")
+
+E.AGGREGATE_SOVI <- mapper_function_equal_breaks(final_table_sf, "E.HS.Agg_sovi", "Social Vulnerability \nHotspot Score", "right", color_scheme = "browns")
+
+frame <- ggarrange(Map.P_BIPOC, 
+                   Map.P_bel_5,
+                   Map.P_above_65,
+                   Map.P_below_poverty,
+                   Map.P_disability,
+                   Map.P_Income75K,
+                   Map.P_cost_burdened,
+                   Map.P_rent_burdened,
+                   mapper_legender_frame(data_df = final_table_sf, fieldname = "E.PCT_industrial_lots", legend_position = "top", color_scheme = "browns"),
+                   nrow = 5, ncol = 2,
+                   common.legend = FALSE) %>%
+  annotate_figure(top = text_grob("\n Social Vulnerability Indicators Per Community District \n Extreme Scenario \n", 
+                                  color = "black", face = "bold", size = 50))
+
+frame %>% ggexport(filename = "data/4_display/maps/extreme/maps_SV.png", 
+                   width = 1800, 
+                   height = 3600) 
+
+### PUBLIC SAFETY
+
+Map.P_POLICE <- mapper_function_quintile(final_table_sf, "E.PCT_POLICE_SERVICES_facilities", "% Police Services", "none", color_scheme = "greens")
+Map.P_FIRE <- mapper_function_quintile(final_table_sf, "E.PCT_FIRE_SERVICES_facilities", "% Fire Services", "none", color_scheme = "greens")
+Map.P_OTHER_EMERGENCY <- mapper_function_quintile(final_table_sf, "E.PCT_OTHER_SAFETY_AND_EMERGENCY_FACILITIES_facilities", "% Other Safety And Emergency \nmanagement Services", "none", color_scheme = "greens")
+
+E.AGGREGATE_PSAFETY <- mapper_function_equal_breaks(final_table_sf, "E.HS.Agg_psafety", "Public Safety Facilities \nHotspot Score", "right", color_scheme = "greens")
+
+frame <- ggarrange(Map.P_POLICE, 
+                   Map.P_FIRE,
+                   Map.P_OTHER_EMERGENCY,
+                   Map.Legend_LEFT,
+                   nrow = 2, ncol = 2,
+                   common.legend = FALSE) %>%
+  annotate_figure(top = text_grob("\n Impact of Flooding on Public Safety Facilities Per Community District \n Extreme Scenario \n", 
+                                  color = "black", face = "bold", size = 50))
+
+frame %>% ggexport(filename = "data/4_display/maps/extreme/maps_PS.png", 
+                   width = 1800, 
+                   height = 2700) 
+
+### HEALTHCARE
+
+Map.P_HospitalsClinics <- mapper_function_quintile(final_table_sf, "E.PCT_HOSPITALS_AND_CLINICS_facilities", "% Hospitals and Clinics", "none", color_scheme = "greens")
+Map.P_ResidentialHCare <- mapper_function_quintile(final_table_sf, "E.PCT_RESIDENTIAL_HEALTH_CARE_facilities", "% Residential Healtchare Facilities", "none", color_scheme = "greens")
+Map.P_MentalHealth <- mapper_function_quintile(final_table_sf, "E.PCT_MENTAL_HEALTH_HEALTH_PROMOTION_AND_CHEMICAL_DEPENDENCY_SERVICES_facilities", "% Mental Health and \nChemical Dependency Facilities", "none", color_scheme = "greens")
+Map.P_OtherHealthCare <- mapper_function_quintile(final_table_sf, "E.PCT_OTHER_HEALTH_CARE_facilities", "% Other Healthcare Facilities", "none", color_scheme = "greens")
+
+
+
+E.AGGREGATE_HEALTHCARE <- mapper_function_equal_breaks(final_table_sf, "E.HS.Agg_healthcare", "Healthcare Facilities \nHotspot Score", "right", color_scheme = "greens")
+
+frame <- ggarrange(Map.P_HospitalsClinics, 
+                   Map.P_ResidentialHCare,
+                   Map.P_MentalHealth,
+                   Map.P_OtherHealthCare,
+                   Map.Legend_LUSE,
+                   nrow = 3, ncol = 2,
+                   common.legend = FALSE) %>%
+  annotate_figure(top = text_grob("\n Impact of Flooding on Healthcare Facilities Per Community District \n Extreme Scenario \n", 
+                                  color = "black", face = "bold", size = 50))
+
+frame %>% ggexport(filename = "data/4_display/maps/extreme/maps_HC.png", 
+                   width = 1800, 
+                   height = 3600) 
+
+### WELFARE
+
+Map.P_HumanDev <- mapper_function_quintile(final_table_sf, "E.PCT_HUMAN_DEVELOPMENT_SERVICES_facilities", "% Human Development Facilities", "none", color_scheme = "greens")
+Map.P_Senior <- mapper_function_quintile(final_table_sf, "E.PCT_SENIOR_AND_DISSABILITY_SERVICES_facilities", "% Senior and Disability Services", "none", color_scheme = "greens")
+Map.P_HousingFood <- mapper_function_quintile(final_table_sf, "E.PCT_HOUSING_AND_FOOD_SERVICES_facilities", "% Housing and Food Services", "none", color_scheme = "greens")
+Map.P_ChildWelfare <- mapper_function_quintile(final_table_sf, "E.PCT_CHILD_SERVICES_AND_WELFARE_SERVICES_facilities", "% Child Services \nand Welfare Facilities", "none", color_scheme = "greens")
+
+
+E.AGGREGATE_WELFARE <- mapper_function_equal_breaks(final_table_sf, "E.HS.Agg_welfare", "Welfare Facilities \nHotspot Score", "right", color_scheme = "greens")
+
+frame <- ggarrange(Map.P_HumanDev, 
+                   Map.P_Senior,
+                   Map.P_HousingFood,
+                   Map.P_ChildWelfare,
+                   Map.Legend_LUSE,
+                   nrow = 3, ncol = 2,
+                   common.legend = FALSE) %>%
+  annotate_figure(top = text_grob("\n Impact of Flooding on Welfare Facilities Per Community District \n Extreme Scenario \n", 
+                                  color = "black", face = "bold", size = 50))
+
+frame %>% ggexport(filename = "data/4_display/maps/extreme/maps_WF.png", 
+                   width = 1800, 
+                   height = 2700)
+
+### EDUCATION
+
+Map.P_K12 <- mapper_function_quintile(final_table_sf, "E.PCT_K12_EDUCATION_SERVICES_facilities", "% K-12 Education Facilities", "none", color_scheme = "greens")
+Map.P_DayCare <- mapper_function_quintile(final_table_sf, "E.PCT_DAY_CARE_AND_PREKINDERGARTEN_facilities", "% Pre-K / Day Care \nEducation Facilities", "none", color_scheme = "greens")
+Map.P_Higher <- mapper_function_quintile(final_table_sf, "E.PCT_COLLEGES_OR_UNIVERSITIES_facilities", "% Higher Education Facilities", "none", color_scheme = "greens")
+Map.P_Proprietary <- mapper_function_quintile(final_table_sf, "E.PCT_PROPRIETARY_SCHOOLS_facilities", "% Proprietary Education Facilities", "none", color_scheme = "greens")
+
+E.AGGREGATE_EDUCATION <- mapper_function_equal_breaks(final_table_sf, "E.HS.Agg_education", "Education Facilities \nIndex", "right", color_scheme = "greens")
+
+frame <- ggarrange(Map.P_K12, 
+                   Map.P_DayCare,
+                   Map.P_Higher,
+                   Map.P_Proprietary,
+                   Map.Legend_LUSE,
+                   nrow = 3, ncol = 2,
+                   common.legend = FALSE) %>%
+  annotate_figure(top = text_grob("\n Impact of Flooding on Welfare Facilities Per Community District \n Extreme Scenario \n", 
+                                  color = "black", face = "bold", size = 50))
+
+frame %>% ggexport(filename = "data/4_display/maps/extreme/maps_ED.png", 
+                   width = 1800, 
+                   height = 2700)
+
+final_table_sf$infra_hotspots_sum <- round(final_table_sf$E.HS.Agg_landuse +
+                                             final_table_sf$E.HS.Agg_transport +
+                                             final_table_sf$E.HS.Agg_education +
+                                             final_table_sf$E.HS.Agg_welfare +
+                                             final_table_sf$E.HS.Agg_psafety +
+                                             final_table_sf$E.HS.Agg_healthcare,2)
+
+final_table_sf$infra_hotspots_sum_n <- normalize(final_table_sf$infra_hotspots_sum) %>%
+  round(2)
+
+frame <- ggarrange(E.AGGREGATE_LUSE,
+                   E.AGGREGATE_TRANSPORT,
+                   E.AGGREGATE_EDUCATION,
+                   E.AGGREGATE_HEALTHCARE,
+                   E.AGGREGATE_WELFARE,
+                   E.AGGREGATE_PSAFETY,
+                   nrow = 3, ncol = 2,
+                   common.legend = FALSE) %>%
+  annotate_figure(top = text_grob("\n Hotspot Scores Per Infrastructure Risk Category Per Community District \n Extreme Scenario \n", 
+                                  color = "black", face = "bold", size = 70))
+
+frame %>% ggexport(filename = "data/4_display/maps/extreme/infra_maps_ALL_HOTSPOTS.png", 
+                   width = 2800, 
                    height = 3600)
 
 ### Differences in SV between exposed - non exposed populations
