@@ -41,6 +41,9 @@ moderate_flooding <- sf::st_read(dsn = "data/1_raw/NYC_Stormwater_Flood_Map_-_Mo
 # Run script ONCE to save tax lot data
 # source("src/NYCF_tax_lots_data.R")
 
+# Run script ONCE to save buildings data
+# source("src/NYCF_buildings_data.R")
+
 # Run script ONCE to save facilities data
 # source("src/NYCF_facilities_data.R")
 
@@ -213,11 +216,21 @@ tax_lots_flooding_summary <- tax_lots_flooding %>%
             Total_mixed_comres_lots = sum(LUseCat %in% "Mixed residential and commercial"),
             Total_commercial_lots = sum(LUseCat %in% "Commercial"),
             Total_industrial_lots = sum(LUseCat %in% "Industrial & manufacturing"),
+            M.Total_residential_lots_0 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& m_d_f <= 0),
+            M.Total_residential_lots_5 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& m_d_f <= 5),
+            M.Total_residential_lots_15 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& m_d_f <= 15),
+            M.Total_residential_lots_30 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& m_d_f <= 30),
+            M.Total_residential_lots_50 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& m_d_f <= 50),
             M.Total_residential_lots = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& m_d_f <= 30),
             M.Total_basement_residential_lots = sum(LUseCat %in% "Residential" &  BSMT_RES == "Basement in residential lot"& m_d_f <= 30),
             M.Total_mixed_comres_lots = sum(LUseCat %in% "Mixed residential and commercial"& m_d_f <= 30),
             M.Total_commercial_lots = sum(LUseCat %in% "Commercial"& m_d_f <= 30),
             M.Total_industrial_lots = sum(LUseCat %in% "Industrial & manufacturing"& m_d_f <= 30),
+            E.Total_residential_lots_0 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& e_d_f <= 0),
+            E.Total_residential_lots_5 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& e_d_f <= 5),
+            E.Total_residential_lots_15 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& e_d_f <= 15),
+            E.Total_residential_lots_30 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& e_d_f <= 30),
+            E.Total_residential_lots_50 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& e_d_f <= 50),
             E.Total_residential_lots = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& e_d_f <= 30),
             E.Total_basement_residential_lots = sum(LUseCat %in% "Residential" &  BSMT_RES == "Basement in residential lot"& e_d_f <= 30),
             E.Total_mixed_comres_lots = sum(LUseCat %in% "Mixed residential and commercial"& e_d_f <= 30),
@@ -235,6 +248,38 @@ tax_lots_flooding_summary <- tax_lots_flooding %>%
          E.PCT_industrial_lots = 100 * E.Total_industrial_lots / Total_industrial_lots)
 
 final_table <- left_join(final_table, tax_lots_flooding_summary, by = c("Geography" = "boro_cd"))
+
+### Buildings
+
+buildings_flooding <- st_read("data/2_intermediate/buildings_CD_flood.shp") %>%
+  st_drop_geometry() %>%
+  filter(boro_cd %nin% c(0, 164, 226, 227, 228, 355, 356, 480, 481, 482, 483, 484, 595))
+
+buildings_flooding_summary <- buildings_flooding %>% 
+  group_by(boro_cd) %>% 
+  summarize(Total_buildings = n(),
+            M.Total_buildings_0 = sum(m_d_f <= 0),
+            M.Total_buildings_5 = sum(m_d_f <= 5),
+            M.Total_buildings_15 = sum(m_d_f <= 15),
+            M.Total_buildings_30 = sum(m_d_f <= 30),
+            M.Total_buildings_50 = sum(m_d_f <= 50),
+            E.Total_buildings_0 = sum(e_d_f <= 0),
+            E.Total_buildings_5 = sum(e_d_f <= 5),
+            E.Total_buildings_15 = sum(e_d_f <= 15),
+            E.Total_buildings_30 = sum(e_d_f <= 30),
+            E.Total_buildings_50 = sum(e_d_f <= 50)) %>% 
+  mutate(M.PCT_buildings_0 = 100 * M.Total_buildings_0 / Total_buildings,
+         M.PCT_buildings_5 = 100 * M.Total_buildings_5 / Total_buildings,
+         M.PCT_buildings_15 = 100 * M.Total_buildings_15 / Total_buildings,
+         M.PCT_buildings_30 = 100 * M.Total_buildings_30 / Total_buildings,
+         M.PCT_buildings_50 = 100 * M.Total_buildings_50 / Total_buildings,
+         E.PCT_buildings_0 = 100 * E.Total_buildings_0 / Total_buildings,
+         E.PCT_buildings_5 = 100 * E.Total_buildings_5 / Total_buildings,
+         E.PCT_buildings_15 = 100 * E.Total_buildings_15 / Total_buildings,
+         E.PCT_buildings_30 = 100 * E.Total_buildings_30 / Total_buildings,
+         E.PCT_buildings_50 = 100 * E.Total_buildings_50 / Total_buildings)
+
+final_table <- left_join(final_table, buildings_flooding_summary, by = c("Geography" = "boro_cd"))
 
 ### Critical infrastructure 
 
@@ -1165,12 +1210,22 @@ NYC_row_data <- list("NYC",
                   sum_NONA(final_table[,"Total_commercial_lots"]),
                   sum_NONA(final_table[,"Total_industrial_lots"]),
                   
+                  sum_NONA(final_table[,"M.Total_residential_lots_0"]),
+                  sum_NONA(final_table[,"M.Total_residential_lots_5"]),
+                  sum_NONA(final_table[,"M.Total_residential_lots_15"]),
+                  sum_NONA(final_table[,"M.Total_residential_lots_30"]),
+                  sum_NONA(final_table[,"M.Total_residential_lots_50"]),
                   sum_NONA(final_table[,"M.Total_residential_lots"]),
                   sum_NONA(final_table[,"M.Total_basement_residential_lots"]),
                   sum_NONA(final_table[,"M.Total_mixed_comres_lots"]),
                   sum_NONA(final_table[,"M.Total_commercial_lots"]),
                   sum_NONA(final_table[,"M.Total_industrial_lots"]),
                   
+                  sum_NONA(final_table[,"E.Total_residential_lots_0"]),
+                  sum_NONA(final_table[,"E.Total_residential_lots_5"]),
+                  sum_NONA(final_table[,"E.Total_residential_lots_15"]),
+                  sum_NONA(final_table[,"E.Total_residential_lots_30"]),
+                  sum_NONA(final_table[,"E.Total_residential_lots_50"]),
                   sum_NONA(final_table[,"E.Total_residential_lots"]),
                   sum_NONA(final_table[,"E.Total_basement_residential_lots"]),
                   sum_NONA(final_table[,"E.Total_mixed_comres_lots"]),
@@ -1188,6 +1243,29 @@ NYC_row_data <- list("NYC",
                   100 * sum_NONA(final_table[,"E.Total_mixed_comres_lots"]) / sum_NONA(final_table[,"Total_mixed_comres_lots"]),
                   100 * sum_NONA(final_table[,"E.Total_commercial_lots"]) / sum_NONA(final_table[,"Total_commercial_lots"]),
                   100 * sum_NONA(final_table[,"E.Total_industrial_lots"]) / sum_NONA(final_table[,"Total_industrial_lots"]),
+                  
+                  sum_NONA(final_table[,"Total_buildings"]),
+                  sum_NONA(final_table[,"M.Total_buildings_0"]),
+                  sum_NONA(final_table[,"M.Total_buildings_5"]),
+                  sum_NONA(final_table[,"M.Total_buildings_15"]),
+                  sum_NONA(final_table[,"M.Total_buildings_30"]),
+                  sum_NONA(final_table[,"M.Total_buildings_50"]),
+                  sum_NONA(final_table[,"E.Total_buildings_0"]),
+                  sum_NONA(final_table[,"E.Total_buildings_5"]),
+                  sum_NONA(final_table[,"E.Total_buildings_15"]),
+                  sum_NONA(final_table[,"E.Total_buildings_30"]),
+                  sum_NONA(final_table[,"E.Total_buildings_50"]),
+                  
+                  100 * sum_NONA(final_table[,"M.Total_buildings_0"]) / sum_NONA(final_table[,"Total_buildings"]),
+                  100 * sum_NONA(final_table[,"M.Total_buildings_5"]) / sum_NONA(final_table[,"Total_buildings"]),
+                  100 * sum_NONA(final_table[,"M.Total_buildings_15"]) / sum_NONA(final_table[,"Total_buildings"]),
+                  100 * sum_NONA(final_table[,"M.Total_buildings_30"]) / sum_NONA(final_table[,"Total_buildings"]),
+                  100 * sum_NONA(final_table[,"M.Total_buildings_50"]) / sum_NONA(final_table[,"Total_buildings"]),
+                  100 * sum_NONA(final_table[,"E.Total_buildings_0"]) / sum_NONA(final_table[,"Total_buildings"]),
+                  100 * sum_NONA(final_table[,"E.Total_buildings_5"]) / sum_NONA(final_table[,"Total_buildings"]),
+                  100 * sum_NONA(final_table[,"E.Total_buildings_15"]) / sum_NONA(final_table[,"Total_buildings"]),
+                  100 * sum_NONA(final_table[,"E.Total_buildings_30"]) / sum_NONA(final_table[,"Total_buildings"]),
+                  100 * sum_NONA(final_table[,"E.Total_buildings_50"]) / sum_NONA(final_table[,"Total_buildings"]),
                   
                   sum_NONA(final_table[,"Total_Education_facilities"]),
                   sum_NONA(final_table[,"M.Total_Education_facilities"]),
@@ -1389,13 +1467,13 @@ NYC_row_data <- list("NYC",
 
 # lets break the final table, and save facility subgroup data separately. Otherwise my brain is exploding
 
-final_table_facility_subgroups <- final_table[,c(1,124:198)]
+final_table_facility_subgroups <- final_table[,c(1,155:229)]
 
 write.csv(final_table_facility_subgroups,
           row.names = FALSE,
           "data/3_output/stormwater_analysis_final_database_facility_subgroups.csv")
 
-final_table <- final_table[,-(124:198)]
+final_table <- final_table[,-(155:229)]
 
 final_table_NYC <- rbind(final_table, NYC_row_data)
 
