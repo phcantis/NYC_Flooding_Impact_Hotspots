@@ -15,10 +15,12 @@ Lead-Author, et al. (2025). Inequitable distribution of population exposure, soc
 
 Data folders are too large for sharing in the repository, and should be created manually. Create a .data/ folder, with the following folders inside:
 
+```
 ├── data/                 
-│   ├── 1_raw              # for input data for the study /n
-│   ├── 2_intermediate     # for storing intermediate datasets
-│   ├── 3_output           # for final datasets included in the manuscript and from which hotspots maps are created
-│   └── 4_display          # for graphical outputs such as plots and maps
+│   ├── 1_raw/              # for input data for the study
+│   ├── 2_intermediate/     # for storing intermediate datasets
+│   ├── 3_output/           # for final datasets included in the manuscript and from which hotspots maps are created
+│   └── 4_display/          # for graphical outputs such as plots and maps
+```
 
 ## 📁 Raw Input Data
