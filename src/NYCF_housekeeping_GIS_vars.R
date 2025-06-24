@@ -1,5 +1,5 @@
 require("pacman")
-pacman::p_load(colorspace, readxl, stringr, nngeo, tigris, viridis, stars, geojsonsf, geojsonio, raster, tidyr, ggplot2, ggthemes, ggpubr, gdalUtils, sf, dplyr, tidycensus, tidyverse, GGally, plotly)
+pacman::p_load(colorspace, readxl, stringr, nngeo, tigris, viridis, stars, geojsonsf, geojsonio, raster, tidyr, ggplot2, ggthemes, ggpubr, sf, dplyr, tidycensus, tidyverse, GGally, plotly)
 
 
 options(scipen=999)
