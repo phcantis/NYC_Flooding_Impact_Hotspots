@@ -1,9 +1,18 @@
-# source("src/NYCF_housekeeping_GIS_vars.R")
+# Pluvial Flood Risk and Critical Infrastructures Exposure in New York City
 
-### Prepare summary NYC table for paper
+# DATE: JUNE 2025
+# AUTHOR: TO BE DISCLOSED UPON ACCEPTANCE OF MANUSCRIPT
+# GOAL: IN THIS SCRIPT, WE WILL CREATE A TABLE SUMMARIZING THE IMPACTS OF FLOODING IN NYC
+
+## this script is meant to be sourced directly from the script "NYCF_report_CD_impacts.R"
+## due to datasets and functions being loaded in the parent script, running this file independently will require line-by-line checks for missing datasets
+
+## all we have to do is load the risk database we generated, and filter it to just keep the row with aggregated results for the entire city.
 
 data_NYC <- read_csv("data/3_output/stormwater_analysis_final_database.csv") %>%
   filter(Geography == "NYC")
+
+## we use the data to create a summary table that can be formatted elsewhere
 
 df_summary_NYC <- data.frame(category = c("Area Flooded (sqkm)",
                                           "Population",

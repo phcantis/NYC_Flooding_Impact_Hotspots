@@ -1,143 +1,42 @@
-# source("src/NYCF_housekeeping_GIS_vars.R")
+# Pluvial Flood Risk and Critical Infrastructures Exposure in New York City
 
-# vars_ACS18 <- load_variables(2018, "acs5", cache = TRUE)
+# DATE: JUNE 2025
+# AUTHOR: TO BE DISCLOSED UPON ACCEPTANCE OF MANUSCRIPT
+# GOAL: IN THIS SCRIPT, WE WILL MEASURE THE MINIMUM DISTANCE TO FLOODING OF NEW YORK CITY'S 2018-2022 CENSUS BLOCK GROUPS.
 
-# Poverty
+## this script is meant to be sourced directly from the script "NYCF_report_CD_impacts.R"
+## due to datasets and functions being loaded in the parent script, running this file independently will require line-by-line checks for missing datasets
 
-vi_total_incomeratio <- c("C17002_001", "incrat_total")
-vi_total_incomeratiomin50 <- c("C17002_002", "incrat_50")
-vi_total_incomeratio50_99 <- c("C17002_003", "incrat_99")
+## we load the input data - American Community Survey 5-year estimates (2018-2022) at the census block group level
 
-# households with income below 75K
-
-vi_total_HH_income <- c("B19001_001", "HH_Income_total")
-vi_HH_income_0_10 <- c("B19001_002", "HH_Income_0_10")
-vi_HH_income_10_14 <- c("B19001_003", "HH_Income_10_14")
-vi_HH_income_15_19 <- c("B19001_004", "HH_Income_15_19")
-vi_HH_income_20_24 <- c("B19001_005", "HH_Income_20_24")
-vi__HH_income_25_29 <- c("B19001_006", "HH_Income_25_29")
-vi__HH_income_30_34 <- c("B19001_007", "HH_Income_30_34")
-vi__HH_income_35_39 <- c("B19001_008", "HH_Income_35_39")
-vi__HH_income_40_44 <- c("B19001_009", "HH_Income_40_44")
-vi__HH_income_45_49 <- c("B19001_010", "HH_Income_45_49")
-vi__HH_income_50_59 <- c("B19001_011", "HH_Income_50_59")
-vi__HH_income_60_74 <- c("B19001_012", "HH_Income_60_74")
-
-# cost-burdened owner occ-households
-
-vi_total_cost_burdened <- c("B25091_001", "HH_CB_total")
-vi_cost_burdened_m_30_34 <- c("B25091_008", "HH_CB_m_30_34")
-vi_cost_burdened_m_35_39 <- c("B25091_009", "HH_CB_m_35_39")
-vi_cost_burdened_m_40_49 <- c("B25091_010", "HH_CB_m_40_49")
-vi_cost_burdened_m_50 <- c("B25091_011", "HH_CB_m_50")
-
-vi_cost_burdened_nm_30_34 <- c("B25091_019", "HH_CB_nm_30_34")
-vi_cost_burdened_nm_35_39 <- c("B25091_020", "HH_CB_nm_35_39")
-vi_cost_burdened_nm_40_49 <- c("B25091_021", "HH_CB_nm_40_49")
-vi_cost_burdened_nm_50 <- c("B25091_022", "HH_CB_nm_50")
-
-# rent burdened households
-
-vi_total_rent_burdened <- c("B25070_001", "HH_RB_total")
-vi_rent_burdened_30_34 <- c("B25070_007", "HH_RB_30_34")
-vi_rent_burdened_35_39 <- c("B25070_008", "HH_RB_35_39")
-vi_rent_burdened_40_49 <- c("B25070_009", "HH_RB_40_49")
-vi_rent_burdened_50 <- c("B25070_010", "HH_RB_50")
-
-acs_vars <- list(vi_total_incomeratiomin50,
-                 vi_total_incomeratio50_99,
-                 vi_total_HH_income,
-                 
-                 vi_HH_income_0_10,
-                 vi_HH_income_10_14,
-                 vi_HH_income_15_19,
-                 vi_HH_income_20_24,
-                 vi__HH_income_25_29,
-                 vi__HH_income_30_34,
-                 vi__HH_income_35_39,
-                 vi__HH_income_40_44,
-                 vi__HH_income_45_49,
-                 vi__HH_income_50_59,
-                 vi__HH_income_60_74,
-                 
-                 vi_total_cost_burdened,
-                 vi_cost_burdened_m_30_34,
-                 vi_cost_burdened_m_35_39,
-                 vi_cost_burdened_m_40_49,
-                 vi_cost_burdened_m_50,
-                 vi_cost_burdened_nm_30_34, 
-                 vi_cost_burdened_nm_35_39,
-                 vi_cost_burdened_nm_40_49,
-                 vi_cost_burdened_nm_50,
-                 
-                 vi_total_rent_burdened,
-                 vi_rent_burdened_30_34,
-                 vi_rent_burdened_35_39,
-                 vi_rent_burdened_40_49,
-                 vi_rent_burdened_50)
-
-NYC_ACS2018 <- get_acs(geography = "block group", variables = vi_total_incomeratio[1],
-                       keep_geo_vars = TRUE,
-                       state = "NY", county = c("005", "047", "061", "081", "085"), 
-                       year = 2018,
-                       survey = "acs5",
-                       geometry = TRUE) %>% 
-  select(-c(variable, NAME.y, NAME.x, TRACTCE)) %>% 
-  rename (!!paste0(vi_total_incomeratio[2], "_e") := estimate, !!paste0(vi_total_incomeratio[2], "_s") := moe) %>%
-  mutate(!!paste0(vi_total_incomeratio[2], "_s") := .data[[!!paste0(vi_total_incomeratio[2], "_s")]] / 1.645) %>% 
-  filter(ALAND > 10)
-
-for(var in acs_vars){
-  
-  print(var[2])
-  
-  NYC_ACS2018.temp <- get_acs(geography = "block group", variables = var[1],
-                              state = "NY", county = c("005", "047", "061", "081", "085"),
-                              year = 2018,
-                              survey = "acs5",
-                              geometry = FALSE) %>% 
-    select(-c(variable, NAME)) %>% 
-    rename(!!paste0(var[2], "_e") := estimate, !!paste0(var[2], "_s") := moe) %>%
-    mutate(!!paste0(var[2], "_s") := .data[[!!paste0(var[2], "_s")]]/1.645)
-  
-  NYC_ACS2018 <- left_join(NYC_ACS2018, NYC_ACS2018.temp, by = "GEOID")
-  rm(NYC_ACS2018.temp)
-}
-
-# Now we add disability data, which we have from previous work. The raw data has not been committed or pushed due to size,
-# but is available upon request. the commented code below serves to keep track of pre-processing done to the data.
-
-
-# SOVI_data_2018 <- st_read(path) %>%
-#   filter(STATEFP == 36) %>%
-#   filter(COUNTYF %in% c("005", "047", "061", "081", "085")) %>%
-#   st_transform(UTM_18N_meter) %>%
-#   st_make_valid() %>%
-#   select(GEOID, TotHH_e, TotHH_s, Disability_e = Disblty_, Disability_s = Dsblty_s, pct_disability_e = P_Dsabl_, pct_disability_s = P_Dsbl_s) %>%
-#   st_drop_geometry()
-# 
-# write_csv(SOVI_data_2018, "data/1_raw/ACS18_BG_disability_data.csv")
-
-SOVI_data_2018 <- read_csv("data/1_raw/ACS18_BG_disability_data.csv") %>%
-  mutate(GEOID = as.character(GEOID))
-
-NYC_ACS2018 <- NYC_ACS2018 %>%
-  left_join(SOVI_data_2018, by = "GEOID") %>%
+NYC_ACS2018 <- st_read("data/1_raw/NYC_2018_ACS.geojson") %>%
+  filter(ALAND > 0) %>% # we filter census block groups that are 100% water, since we will not care about their exposure to flooding
   st_transform(UTM_18N_meter)
 
-CD_with_parks <- st_read("data/1_raw/Community_Districts.shp") %>% 
-  select(boro_cd) %>%
-  st_transform(UTM_18N_meter) %>% 
-  arrange(boro_cd)
+## the lines below will write a new column in the dataset indicating the distance to the closest flooding 
+## the new column called "m_d_f" refers to exposure under the moderate scenario, while "e_d_f" does for the extreme scenario
+
+NYC_ACS2018 <- write_closest_flooding(NYC_ACS2018, 
+                                      moderate_flooding, 
+                                      "m_d_f")
+
+NYC_ACS2018 <- write_closest_flooding(NYC_ACS2018, 
+                                      extreme_flooding, 
+                                      "e_d_f")
+
+## in order to aggregate exposure statistics to the CD level, we need to spatially join census block groups to CDs
 
 NYC_ACS2018 <- st_join(NYC_ACS2018, CD_with_parks, largest = TRUE)
 
-NYC_ACS2018 <- write_closest_flooding(NYC_ACS2018, moderate_flooding, "m_d_f")
+## sourced ACS data requires some processing to aggregate native variables into the target indicators. 
+## because ACS data comes as estimates, they also include margins of error (here already converted to standard error in columns ending with "_s")
+## for instance the indicator "people below the poverty line" (belpov_e) requires aggregating the native variables providing "people living below 1/2 the poverty line" and "people living between 1/2 and the poverty line"
+## estimates are aggregated, and error propagation is considered using the formulas indicated by the Census Bureau. See https://www2.census.gov/programs-surveys/acs/tech_docs/statistical_testing/2020_Instructions_for_Stat_Testing_ACS.pdf
 
-NYC_ACS2018 <- write_closest_flooding(NYC_ACS2018, extreme_flooding, "e_d_f")
+## below, a dataset with the final indicators is prepared based on the native sourced variables.
 
 NYC_ACS2018 <- NYC_ACS2018 %>% 
-  st_drop_geometry() %>%
+  st_drop_geometry() %>%          # as exposure has been assessed and CDs have been assigned to each CBG, geometry is no longer needed. we remove it and treat the data as a data frame
   mutate(
     Total_Belpov_e = incrat_total_e,
     Total_Belpov_s = incrat_total_s,
@@ -174,7 +73,9 @@ NYC_ACS2018 <- NYC_ACS2018 %>%
 
 write_csv(NYC_ACS2018, "data/2_intermediate/NYC_ACS_2018.csv")
 
-# Some code to check collinearity
+rm(NYC_ACS2018)
+
+## because we use so many economy-related indicators, this code below is used to check for multi collinearity using the Variance Inflation Factor
 
 # NYC_ACS2018 <- NYC_ACS2018 %>%
 #   mutate(

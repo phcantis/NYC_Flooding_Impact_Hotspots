@@ -1,29 +1,43 @@
+# Pluvial Flood Risk and Critical Infrastructures Exposure in New York City
+
+# DATE: JUNE 2025
+# AUTHOR: TO BE DISCLOSED UPON ACCEPTANCE OF MANUSCRIPT
+# GOAL: IN THIS SCRIPT, WE WILL ASSESS THE EXPOSURE TO FLOODING FOR EACH DATASET USED IN THE STUDY. 
+# EXPOSURE ASSESSMENTS ARE CARRIED OUT BY MEASURING THE MINIMUM DISTANCE TO FLOODING OF EACH SPATIAL ENTITY, SO THAT A FILTERING APPROACH CAN BE USED LATER.
+# EXPOSURE METRICS ARE SUMMARIZED TO THE SCALE OF THE ANALYSIS - COMMUNITTY DISTRICTS IN NYC
+
+
+## we begin loading the libraries, functions, and variables that we will recurrently use
 
 source("src/NYCF_housekeeping_GIS_vars.R")
 
-## load CDs layer without and with parks
+## we begin loading a Community Districts (CD) layer and filter out  the dataset's entities that represent parks (e.g. Central Park). 
+## large park areas lack socioeconomic and hazard data, and hence are excluded from the risk analysis.
 
 CD <- st_read("data/1_raw/Community_Districts.shp") %>% 
-  select(boro_cd) %>%
+  select(boro_cd) %>%                                                                 # we only need this field, depicting each CD's unique identifier
   st_transform(UTM_18N_meter) %>% 
   arrange(boro_cd) %>%
-  filter(boro_cd %nin% c(164, 226, 227, 228, 355, 356, 480, 481, 482, 483, 484, 595))
+  filter(boro_cd %nin% c(164, 226, 227, 228, 355, 356, 480, 481, 482, 483, 484, 595)) # CD's assigned to parks
+
+## some spatial operations will require using the full NYC area, so we load a version of the CD dataset that includes park areas
 
 CD_with_parks <- st_read("data/1_raw/Community_Districts.shp") %>% 
   select(boro_cd) %>%
   st_transform(UTM_18N_meter) %>% 
   arrange(boro_cd)
 
-## load flooding data
+## now we load flood hazard data for each scenario
 
 extreme_flooding <- sf::st_read(dsn = "data/1_raw/NYC_Stormwater_Flood_Map_-_Extreme_Flood.gdb/NYC Stormwater Flood Map - Extreme Flood.gdb",
                                 layer = "ExtremeFlood_single_part") %>%
-  st_cast("MULTIPOLYGON") %>%
-  st_make_valid() %>%
+  st_cast("MULTIPOLYGON") %>%       # we make sure that all geometries are treated as multipolygon. Some geometries in the original dataset are provided as multisurface and may generate incosistent results
+  st_make_valid() %>%               # sanity check after altering geometry types to make sure the new geometries are 100% valid
   st_transform(UTM_18N_meter) %>% 
-  st_dissolve() %>% 
-  st_intersection(CD)
+  st_dissolve() %>%                 # we blend all flood hazard geometries to have a single flood hazard type that will be treated equally across the study. 
+  st_intersection(CD)               # each flooding geometry is intersected an assigned to its overlapping CD
 
+  
 moderate_flooding <- sf::st_read(dsn = "data/1_raw/NYC_Stormwater_Flood_Map_-_Moderate_Flood.gdb/NYC Stormwater Flood Map - Moderate Flood.gdb",
                                  layer = "ModerateFlood_single_part") %>%
   st_cast("MULTIPOLYGON") %>%
@@ -32,72 +46,81 @@ moderate_flooding <- sf::st_read(dsn = "data/1_raw/NYC_Stormwater_Flood_Map_-_Mo
   st_dissolve() %>% 
   st_intersection(CD)
 
-# Run script ONCE to save decennial census data
+## now we will prepare all the data by measuring the distance to flooding of each spatial entity. 
+## for sanity, each exposure assessment is made in a separate script.
+## ATTENTION these scripts (esp for tax lots and buildings) take a REALLY long time to run and significant computation resources.
+## outputs of each script are already provided in the "data/2_intermediate" folder to save time. 
+## attempts to reproduce and run these scripts must expect long running times.
+
+## Run script ONCE to assess the exposure of decennial census data
 # source("src/NYCF_decennial_census_data.R")
 
-# Run script ONCE to save decennial ACS data
+## Run script ONCE to assess the exposure of decennial ACS data
 # source("src/NYCF_ACS_data.R")
 
-# Run script ONCE to save tax lot data
+## Run script ONCE to assess the exposure of tax lot data
 # source("src/NYCF_tax_lots_data.R")
 
-# Run script ONCE to save buildings data
+## Run script ONCE to assess the exposure of buildings data
 # source("src/NYCF_buildings_data.R")
 
-# Run script ONCE to save facilities data
+## Run script ONCE to assess the exposure of facilities data
 # source("src/NYCF_facilities_data.R")
 
-# Run script ONCE to save transportation data
+## Run script ONCE to assess the exposure of transportation data
 # source("src/NYCF_transportation_data.R")
 
-# Final table template on which we will keep on adding fields
+## now that we have measured all the distances to closest flooding for the input data, we will progressively add columns to our CDs dataset, depicting different exposure indicators.
+## additional exposure assessments relying on other metrics than distance (e.g. %area) will be performed along the way.
 
-columns <- c("Geography", 
+## we begin with some columns to initiate our CDs final table reporting flooding exposure indicators
+
+columns <- c("Geography",              # final table uses the term "Geography" to refer to each CD identifier in order to avoid confusions in the code when calling "boro_cd" in the CD dataset
              "Total_area", 
-             "M.Total_area", 
-             "M.PCT_area", 
-             "E.Total_area", 
-             "E.PCT_area",
              "Total_road_area",
              "M.Total_road_area",
              "M.PCT_road_area",
              "E.Total_road_area",
              "E.PCT_road_area")
 
+
+## set up final table with the defined starting columns 
 final_table <- data.frame(matrix(ncol = length(columns), nrow = nrow(CD)))
 names(final_table) <- columns
-final_table$Geography <- c(CD$boro_cd)
+final_table$Geography <- c(CD$boro_cd)    
 
-## geographic total areas (based on CDs layer)
+## geographic total areas (based on CDs layer) - square meters
 
 final_table["Total_area"] <- c(st_area(CD))
 
-### assess impact of flooding - areas within city and case CDs
+## assess impact of flooding in each CD - % area flooded in each CD
 
-for (comdist in CD$boro_cd){
-  
-  print(comdist)
-  
-  neighborhood <- CD[CD$boro_cd == comdist,]
-  
-  mod.flood <- filter(moderate_flooding, boro_cd == comdist)
-  mod.area <- sum(st_area(mod.flood))
+M.area_flooded <- moderate_flooding %>% 
+  mutate(area = st_area(moderate_flooding)) %>% 
+  st_drop_geometry() %>% 
+  group_by(boro_cd) %>% 
+  summarise(M.Total_area = sum(area)) # all indicators with an "M." prefix refer to the moderate scenario
 
-  ext.flood <- filter(extreme_flooding, boro_cd == comdist)
-  ext.area <- sum(st_area(ext.flood))
-  
-  final_table[final_table$Geography == comdist, "M.Total_area"] <- mod.area
-  final_table[final_table$Geography == comdist, "E.Total_area"] <- ext.area
-  
-  final_table[final_table$Geography == comdist, "M.PCT_area"] <- 100 * final_table[final_table$Geography == comdist, "M.Total_area"] / final_table[final_table$Geography == comdist, "Total_area"]
-  final_table[final_table$Geography == comdist, "E.PCT_area"] <- 100 * final_table[final_table$Geography == comdist, "E.Total_area"] / final_table[final_table$Geography == comdist, "Total_area"]
-  
-  rm(comdist, mod.flood, mod.area, ext.flood, ext.area)
-  
-}
+E.area_flooded <- extreme_flooding %>% 
+  mutate(area = st_area(extreme_flooding)) %>% 
+  st_drop_geometry() %>% 
+  group_by(boro_cd) %>% 
+  summarise(E.Total_area = sum(area)) # all indicators with an "E." prefix refer to the extreme scenario
+
+final_table <- final_table %>%
+  left_join(M.area_flooded, by = c("Geography" = "boro_cd")) %>% 
+  left_join(E.area_flooded, by = c("Geography" = "boro_cd")) %>% 
+  mutate(M.PCT_area = 100  * M.Total_area / Total_area,
+         E.PCT_area = 100  * E.Total_area / Total_area)
+
+## population exposure, considering total population, as well as age and race (based on decennial census at census block level)
+## we will first create summary statistics for each CD regardless of flooding
+## and then we will generate the same metrics isolating the data of exposed / non-exposed blocks
 
 NYC_flooding_blocks.joined.CDs <- st_read("data/2_intermediate/NYC_blocks_CD_demo_flood.shp") %>%
   st_drop_geometry()
+
+## summary statistics for each CD's total population
 
 demographic_summary <- (NYC_flooding_blocks.joined.CDs) %>% 
   drop_na(boro_cd) %>%
@@ -116,10 +139,10 @@ demographic_summary <- (NYC_flooding_blocks.joined.CDs) %>%
   mutate(Total_bipoc_population = Total_population - Total_white_population,
          PCT_bipoc_population = 100 - PCT_white_population)
 
-### Write demographic variables in the final table!
 final_table <- inner_join(final_table, demographic_summary, by = c("Geography" = "boro_cd"))
 
-### Now demographic data for flooded census blocks
+## summary statistics for each CD's exposed population, under each scenario
+## at the same time, we generate the same stats for each CD's population that is NOT exposed (indicators with prefixes "M.N." and "E.N.")
 
 m.exposed_population <- filter(NYC_flooding_blocks.joined.CDs, m_d_f == 0)
 m.unexposed_population <- filter(NYC_flooding_blocks.joined.CDs, m_d_f > 0)
@@ -205,6 +228,8 @@ final_table <- left_join(final_table, Flood_summary_all, by = c("Geography" = "b
   mutate(M.PCT_Total_population = 100 * (M.Total_population / Total_population),
          E.PCT_Total_population = 100 * (E.Total_population / Total_population))
 
+## now we move to tax lot data to assess exposure per land use type
+
 tax_lots_flooding <- st_read("data/2_intermediate/tax_lots_CD_flood.shp") %>%
   st_drop_geometry() %>%
   filter(boro_cd %nin% c(0, 164, 226, 227, 228, 355, 356, 480, 481, 482, 483, 484, 595))
@@ -249,11 +274,13 @@ tax_lots_flooding_summary <- tax_lots_flooding %>%
 
 final_table <- left_join(final_table, tax_lots_flooding_summary, by = c("Geography" = "boro_cd"))
 
-### Buildings
+## Buildings exposure is added to generate data requested by reviewers to illustrate sensitivity of results to different geometry types.
 
 buildings_flooding <- st_read("data/2_intermediate/buildings_CD_flood.shp") %>%
   st_drop_geometry() %>%
   filter(boro_cd %nin% c(0, 164, 226, 227, 228, 355, 356, 480, 481, 482, 483, 484, 595))
+
+## we summarize the total number of buildings exposed to each flooding scenario under different distance thresholds (0 meters, 5, 15, 30 and 50)
 
 buildings_flooding_summary <- buildings_flooding %>% 
   group_by(boro_cd) %>% 
@@ -281,13 +308,16 @@ buildings_flooding_summary <- buildings_flooding %>%
 
 final_table <- left_join(final_table, buildings_flooding_summary, by = c("Geography" = "boro_cd"))
 
-### Critical infrastructure 
+## Critical infrastructures and services 
 
 facilities_data_points <- st_read("data/2_intermediate/facilities_20210811_flooding.shp") %>% 
   filter(boro_cd %nin% c(0, 164, 226, 227, 228, 355, 356, 480, 481, 482, 483, 484, 595))
 
 facility_categories <- unique(facilities_data_points$CatFac)
 facility_subgroups <- unique(facilities_data_points$FACSUBGRP)
+
+## the loop below writes the stats of each of the 4 facility categories (education, health, welfare, and public safety) for each CD
+## stats include the total number for each CD, and exposure metrics for each scenario
 
 for(facility_cat in facility_categories){
   
@@ -321,6 +351,7 @@ for(facility_cat in facility_categories){
   
 }
 
+## we can also write a csv table with the full disaggregated stats, considering all the subcategories of facilities within each broad theme
 
 facilities_summary_citywide <- data.frame(SUBGRP = facility_subgroups, "Total" = 0, "M.Total" = 0, "E.Total" = 0, "M.PCT" =0, "E.PCT"=0)
 
@@ -363,8 +394,9 @@ write.csv(facilities_summary_citywide,
           row.names = FALSE,
           "data/3_output/stormwater_analysis_final_database_facility_subgroups_CITYWIDE.csv")
 
-
-### Transportation indicators
+## now we include exposure indicators for transportation
+## bus stops and subway entrances are selected using distance criteria, as it was measured already in the sub-script.
+## roads and bus routes, on the other side, are assessed here to generate a % of total road area that floods in each CD under each flooding scenario.
 
 bus_stops_summary <- st_read("data/2_intermediate/bus_stops_flooding.shp") %>%
   st_drop_geometry() %>%
@@ -388,9 +420,13 @@ final_table <- final_table %>%
   left_join(bus_stops_summary, by = c("Geography" = "boro_cd")) %>%
   left_join(subway_entrances_summary, by = c("Geography" = "boro_cd"))
 
+## for bus routes, we load them here
+
 bus_routes <- st_read("data/1_raw/bus_routes_nyc_nov2020.shp") %>% 
   st_transform(UTM_18N_meter) %>%
   st_intersection(CD)
+
+## the loop below will iterate through each CD, collect the bus routes that cut through it, and assess the number and % of bus routes that intersect with flooding
 
 for(comdist in unique(bus_routes$boro_cd)){
   
@@ -419,11 +455,15 @@ for(comdist in unique(bus_routes$boro_cd)){
   
   }
 
-### % roads flooded
+## % roads flooded
 
 roads <- st_read("data/1_raw/geo_export_4443d165-7281-4b57-a1a1-f651c232b7ab.shp") %>%
   st_transform(UTM_18N_meter) %>%
-  filter(rw_type %nin% c(2,3,9, 14, 4)) # IM ALSO REMOVING 3 (bridges) because flooding will show the underpass flooding  and 14 (ferry routes) and 4 (tunnels) because flooding is in the surface
+  filter(rw_type %nin% c(2,3,9, 14, 4)) # remove road types that are not walkable / drivable. IM ALSO REMOVING 3 (bridges) because flooding will show the underpass flooding  and 14 (ferry routes) and 4 (tunnels) because flooding is in the surface
+
+## road data is complex (lots of entities with complex geometries).
+## to make the process easier, the loop below will iterate through each CD to calculate total road area, 
+## and the amount / % of road area that overlaps with flooding under each scenario
 
 for (comdist in CD$boro_cd){
   print(comdist)
@@ -432,7 +472,7 @@ for (comdist in CD$boro_cd){
   
   roads_cd <- roads[AOI, ]
   
-  roads_cd.buf <- st_buffer(roads_cd, (roads_cd$st_width / (2*3.281)), endCapStyle = "FLAT") %>% 
+  roads_cd.buf <- st_buffer(roads_cd, (roads_cd$st_width / (2*3.281)), endCapStyle = "FLAT") %>% ## the dataset includes a width field that we can use to transfer the data from a line to a road's foorprint
     st_make_valid()
   
   roads_cd.buf.int <- st_intersection(roads_cd.buf, AOI)
@@ -454,30 +494,38 @@ for (comdist in CD$boro_cd){
 }
 
 
-### Load SOVI data
+## the final piece of the puzzle is social vulnerability. 
+## we already compiled age and race indicators at the census block level, 
+## so now we move on to census block group level ACS data
+## the main challenge here will be to aggregate the data to the CD level. Because of the estimates' standard errors, we have to apply error propagation considerations
 
 SOVI_data.CD <- read_csv("data/2_intermediate/NYC_ACS_2018.csv") %>% 
   filter(boro_cd %nin% c(0, 164, 226, 227, 228, 355, 356, 480, 481, 482, 483, 484, 595)) %>%
-  mutate(boro_cd = as.numeric(boro_cd)) %>%
-  filter(ALAND > 0)
+  mutate(boro_cd = as.numeric(boro_cd))
 
-### Change to NA MoEs of second zeros
+## We will work with each CD's populations separately (total population, exposed, and non-exposed). 
+## accounting that exposed / unexposed tables are generated for each scenario, we will be dealing with 5 aggregations in total
+## when aggregating census block groups to each CD, we may encounter several CBGs with 0 as the estimated value (e.g. 0 people living in poverty).
+## theUS Census Bureau recommends accounting for the MoE of 0-value estimates only once when performing an aggregation, in order to avoid a super inflated MoE value. See slide 52 here - https://www.census.gov/content/dam/Census/programs-surveys/acs/guidance/training-presentations/20180418_MOE_Webinar_Transcript.pdf
+## we apply the custom function "second_zero_NAs()" to remove the Standard Error of all 0-values except for the first that occurs in each column
 
-### Separate data here, then change MoE of second zeros to NAs
 
-ACS_demographic_summary <- (SOVI_data.CD) %>% second_zero_NAs()
+ACS_demographic_summary <- (SOVI_data.CD) %>% second_zero_NAs()                         # total population in each CD
 
-M.ACS_demographic_summary <- (filter(SOVI_data.CD, m_d_f == 0)) %>% second_zero_NAs()
-M.N.ACS_demographic_summary <- (filter(SOVI_data.CD, m_d_f > 0)) %>% second_zero_NAs()
+M.ACS_demographic_summary <- (filter(SOVI_data.CD, m_d_f == 0)) %>% second_zero_NAs()   # Moderate scenario - exposed
+M.N.ACS_demographic_summary <- (filter(SOVI_data.CD, m_d_f > 0)) %>% second_zero_NAs()  # Moderate scenario - not exposed
 
 E.ACS_demographic_summary <- (filter(SOVI_data.CD, e_d_f == 0)) %>% second_zero_NAs()
 E.N.ACS_demographic_summary <- (filter(SOVI_data.CD, e_d_f > 0)) %>% second_zero_NAs()
 
-ACS_demographic_summary <- (ACS_demographic_summary) %>% 
+## now one by one we will aggregate and recalculate estimated social vulnerability indicators for each CD
+## first for each CD's total population
+
+ACS_demographic_summary <- (ACS_demographic_summary) %>%
   drop_na(boro_cd) %>%
   dplyr::group_by(boro_cd) %>% 
   dplyr::summarise(Belpov_e = sum(Belpov_e, na.rm = TRUE),
-                   Belpov_s = (sum(Belpov_s^2, na.rm = TRUE))^0.5,
+                   Belpov_s = (sum(Belpov_s^2, na.rm = TRUE))^0.5,                      # square root of the sum of the squared standard errors is used to calculate the new standard error of summed estimates
                    Total_Belpov_e = sum(Total_Belpov_e, na.rm = TRUE),
                    Total_Belpov_s = (sum(Total_Belpov_s^2, na.rm = TRUE))^0.5,
 
@@ -536,6 +584,8 @@ ACS_demographic_summary <- (ACS_demographic_summary) %>%
                                               (1 / Total_Owned_HH_e) * (CB_HH_s^2 + ((CB_HH_e / Total_Owned_HH_e)^2 * Total_Owned_HH_s^2))^0.5),
                                        CB_HH_s / Total_Owned_HH_e)
          )
+
+## now for each CD's exposed population (moderate scenario)
 
 M.ACS_demographic_summary <- (M.ACS_demographic_summary) %>% 
   drop_na(boro_cd) %>%
@@ -601,6 +651,9 @@ M.ACS_demographic_summary <- (M.ACS_demographic_summary) %>%
                                M.CB_HH_s / M.Total_Owned_HH_e)
   )
 
+
+## now for each CD's not-exposed population (moderate scenario)
+
 M.N.ACS_demographic_summary <- (M.N.ACS_demographic_summary) %>% 
   drop_na(boro_cd) %>%
   dplyr::group_by(boro_cd) %>% 
@@ -664,6 +717,8 @@ M.N.ACS_demographic_summary <- (M.N.ACS_demographic_summary) %>%
                                         (1 / M.N.Total_Owned_HH_e) * (M.N.CB_HH_s^2 + ((M.N.CB_HH_e / M.N.Total_Owned_HH_e)^2 * M.N.Total_Owned_HH_s^2))^0.5),
                                  M.N.CB_HH_s / M.N.Total_Owned_HH_e)
   )
+
+## now for each CD's exposed population (extreme scenario)
 
 E.ACS_demographic_summary <- (E.ACS_demographic_summary) %>% 
   drop_na(boro_cd) %>%
@@ -729,6 +784,8 @@ E.ACS_demographic_summary <- (E.ACS_demographic_summary) %>%
                                    E.CB_HH_s / E.Total_Owned_HH_e)
   )
 
+## now for each CD's not-exposed population (extreme scenario)
+
 E.N.ACS_demographic_summary <- (E.N.ACS_demographic_summary) %>% 
   drop_na(boro_cd) %>%
   dplyr::group_by(boro_cd) %>% 
@@ -793,6 +850,9 @@ E.N.ACS_demographic_summary <- (E.N.ACS_demographic_summary) %>%
                                    E.N.CB_HH_s / E.N.Total_Owned_HH_e)
   )
 
+
+## now we join all the SV data tables to the database 
+
 final_table <- final_table %>%
   left_join(ACS_demographic_summary, by = c("Geography" = "boro_cd")) %>% 
   left_join(M.ACS_demographic_summary, by = c("Geography" = "boro_cd")) %>%
@@ -800,331 +860,27 @@ final_table <- final_table %>%
   left_join(E.ACS_demographic_summary, by = c("Geography" = "boro_cd")) %>%
   left_join(E.N.ACS_demographic_summary, by = c("Geography" = "boro_cd"))
 
-# For the NYC row, lets calculate ACS variables first, then add them (so I dont go crazy)
+## Now that the data is ready, it would be nice to have an additional row capturing the statistics for the entire city (all CDs aggregated) 
+## In preparation for that, we begin with aggregating indicators and data linked to ACS - sv data in order to keep track of recalculated standard errors
+## the aggregation of all the ACS data takes lots of code rows due to hard-coding the error propagation of standard errors and doign the same operation 5 times (once for each group - total population, moderate exposed, moderate unexposed, extreme exposed, extreme unexposed)
+## we thus source the code in a separate file to declutter a bit
 
-## CityWide
+source("src/NYCF_citywide_ACS_aggregation.R")
 
-NYC.Total_Belpov_e <- sum(final_table[,"Total_Belpov_e"])
-NYC.Total_Belpov_s <- (sum(final_table[,"Total_Belpov_s"]^2))^0.5
-NYC.Belpov_e <- sum(final_table[,"Belpov_e"])
-NYC.Belpov_s <- (sum(final_table[,"Belpov_s"]^2))^0.5
-
-NYC.Total_HH_Income_e <- sum(final_table[,"Total_HH_Income_e"])
-NYC.Total_HH_Income_s <- (sum(final_table[,"Total_HH_Income_s"]^2))^0.5
-NYC.HH_Income_Bel75K_e <- sum(final_table[,"HH_Income_Bel75K_e"])
-NYC.HH_Income_Bel75K_s <- (sum(final_table[,"HH_Income_Bel75K_s"]^2))^0.5
-
-NYC.Total_HH_Dis_e <- sum(final_table[,"Total_HH_Dis_e"])
-NYC.Total_HH_Dis_s <- (sum(final_table[,"Total_HH_Dis_s"]^2))^0.5
-NYC.HH_Disability_e <- sum(final_table[,"HH_Disability_e"])
-NYC.HH_Disability_s <- (sum(final_table[,"HH_Disability_s"]^2))^0.5
-
-NYC.Total_Rent_HH_e <- sum(final_table[,"Total_Rent_HH_e"])
-NYC.Total_Rent_HH_s <- (sum(final_table[,"Total_Rent_HH_s"]^2))^0.5
-NYC.RB_HH_e <- sum(final_table[,"RB_HH_e"])
-NYC.RB_HH_s <- (sum(final_table[,"RB_HH_s"]^2))^0.5
-
-NYC.Total_Owned_HH_e <- sum(final_table[,"Total_Owned_HH_e"])
-NYC.Total_Owned_HH_s <- (sum(final_table[,"Total_Owned_HH_s"]^2))^0.5
-NYC.CB_HH_e <- sum(final_table[,"CB_HH_e"])
-NYC.CB_HH_s <- (sum(final_table[,"CB_HH_s"]^2))^0.5
-
-NYC.PCT_Belpov_e <- 100 * NYC.Belpov_e / NYC.Total_Belpov_e
-NYC.PCT_Belpov_s <- 100 * ifelse(NYC.PCT_Belpov_e != 100,
-                             ifelse((NYC.Belpov_s^2 - ((NYC.Belpov_e / NYC.Total_Belpov_e)^2 * NYC.Total_Belpov_s^2)) > 0,
-                                    (1 / NYC.Total_Belpov_e) * ((NYC.Belpov_s^2 - ((NYC.Belpov_e / NYC.Total_Belpov_e)^2 * NYC.Total_Belpov_s^2))^0.5),
-                                    (1 / NYC.Total_Belpov_e) * ((NYC.Belpov_s^2 + ((NYC.Belpov_e / NYC.Total_Belpov_e)^2 * NYC.Total_Belpov_s^2))^0.5)),
-                             NYC.Belpov_s / NYC.Total_Belpov_e)
-
-NYC.PCT_HH_Income_Bel75K_e <- 100 * NYC.HH_Income_Bel75K_e / NYC.Total_HH_Income_e
-NYC.PCT_HH_Income_Bel75K_s <- 100 * ifelse(NYC.PCT_HH_Income_Bel75K_e != 100,
-                                 ifelse((NYC.HH_Income_Bel75K_s^2 - ((NYC.HH_Income_Bel75K_e / NYC.Total_HH_Income_e)^2 * NYC.Total_HH_Income_s^2)) > 0,
-                                        (1 / NYC.Total_HH_Income_e) * ((NYC.HH_Income_Bel75K_s^2 - ((NYC.HH_Income_Bel75K_e / NYC.Total_HH_Income_e)^2 * NYC.Total_HH_Income_s^2))^0.5),
-                                        (1 / NYC.Total_HH_Income_e) * ((NYC.HH_Income_Bel75K_s^2 + ((NYC.HH_Income_Bel75K_e / NYC.Total_HH_Income_e)^2 * NYC.Total_HH_Income_s^2))^0.5)),
-                                 NYC.HH_Income_Bel75K_s / NYC.Total_HH_Income_e)
-
-NYC.PCT_HH_Disability_e <- 100 * NYC.HH_Disability_e / NYC.Total_HH_Dis_e
-NYC.PCT_HH_Disability_s <- 100 * ifelse(NYC.PCT_HH_Disability_e != 100,
-                                 ifelse((NYC.HH_Disability_s^2 - ((NYC.HH_Disability_e / NYC.Total_HH_Dis_e)^2 * NYC.Total_HH_Dis_s^2)) > 0,
-                                        (1 / NYC.Total_HH_Dis_e) * ((NYC.HH_Disability_s^2 - ((NYC.HH_Disability_e / NYC.Total_HH_Dis_e)^2 * NYC.Total_HH_Dis_s^2))^0.5),
-                                        (1 / NYC.Total_HH_Dis_e) * ((NYC.HH_Disability_s^2 + ((NYC.HH_Disability_e / NYC.Total_HH_Dis_e)^2 * NYC.Total_HH_Dis_s^2))^0.5)),
-                                 NYC.HH_Disability_s / NYC.Total_HH_Dis_e)
-
-NYC.PCT_RB_e <- 100 * NYC.RB_HH_e / NYC.Total_Rent_HH_e
-NYC.PCT_RB_s <- 100 * ifelse(NYC.PCT_RB_e != 100,
-                                 ifelse((NYC.RB_HH_s^2 - ((NYC.RB_HH_e / NYC.Total_Rent_HH_e)^2 * NYC.Total_Rent_HH_s^2)) > 0,
-                                        (1 / NYC.Total_Rent_HH_e) * ((NYC.RB_HH_s^2 - ((NYC.RB_HH_e / NYC.Total_Rent_HH_e)^2 * NYC.Total_Rent_HH_s^2))^0.5),
-                                        (1 / NYC.Total_Rent_HH_e) * ((NYC.RB_HH_s^2 + ((NYC.RB_HH_e / NYC.Total_Rent_HH_e)^2 * NYC.Total_Rent_HH_s^2))^0.5)),
-                             NYC.RB_HH_s / NYC.Total_Rent_HH_e)
-
-NYC.PCT_CB_e <- 100 * NYC.CB_HH_e / NYC.Total_Owned_HH_e
-NYC.PCT_CB_s <- 100 * ifelse(NYC.PCT_CB_e != 100,
-                             ifelse((NYC.CB_HH_s^2 - ((NYC.CB_HH_e / NYC.Total_Owned_HH_e)^2 * NYC.Total_Owned_HH_s^2)) > 0,
-                                    (1 / NYC.Total_Owned_HH_e) * ((NYC.CB_HH_s^2 - ((NYC.CB_HH_e / NYC.Total_Owned_HH_e)^2 * NYC.Total_Owned_HH_s^2))^0.5),
-                                    (1 / NYC.Total_Owned_HH_e) * ((NYC.CB_HH_s^2 + ((NYC.CB_HH_e / NYC.Total_Owned_HH_e)^2 * NYC.Total_Owned_HH_s^2))^0.5)),
-                             NYC.CB_HH_s / NYC.Total_Owned_HH_e)
-
-## Moderate CityWide
-
-NYC.M.Total_Belpov_e <- sum(final_table[,"M.Total_Belpov_e"])
-NYC.M.Total_Belpov_s <- (sum(final_table[,"M.Total_Belpov_s"]^2))^0.5
-NYC.M.Belpov_e <- sum(final_table[,"M.Belpov_e"])
-NYC.M.Belpov_s <- (sum(final_table[,"M.Belpov_s"]^2))^0.5
-
-NYC.M.Total_HH_Income_e <- sum(final_table[,"M.Total_HH_Income_e"])
-NYC.M.Total_HH_Income_s <- (sum(final_table[,"M.Total_HH_Income_s"]^2))^0.5
-NYC.M.HH_Income_Bel75K_e <- sum(final_table[,"M.HH_Income_Bel75K_e"])
-NYC.M.HH_Income_Bel75K_s <- (sum(final_table[,"M.HH_Income_Bel75K_s"]^2))^0.5
-
-NYC.M.Total_HH_Dis_e <- sum(final_table[,"M.Total_HH_Dis_e"])
-NYC.M.Total_HH_Dis_s <- (sum(final_table[,"M.Total_HH_Dis_s"]^2))^0.5
-NYC.M.HH_Disability_e <- sum(final_table[,"M.HH_Disability_e"])
-NYC.M.HH_Disability_s <- (sum(final_table[,"M.HH_Disability_s"]^2))^0.5
-
-NYC.M.Total_Rent_HH_e <- sum(final_table[,"M.Total_Rent_HH_e"])
-NYC.M.Total_Rent_HH_s <- (sum(final_table[,"M.Total_Rent_HH_s"]^2))^0.5
-NYC.M.RB_HH_e <- sum(final_table[,"M.RB_HH_e"])
-NYC.M.RB_HH_s <- (sum(final_table[,"M.RB_HH_s"]^2))^0.5
-
-NYC.M.Total_Owned_HH_e <- sum(final_table[,"M.Total_Owned_HH_e"])
-NYC.M.Total_Owned_HH_s <- (sum(final_table[,"M.Total_Owned_HH_s"]^2))^0.5
-NYC.M.CB_HH_e <- sum(final_table[,"M.CB_HH_e"])
-NYC.M.CB_HH_s <- (sum(final_table[,"M.CB_HH_s"]^2))^0.5
-
-NYC.M.PCT_Belpov_e <- 100 * NYC.M.Belpov_e / NYC.M.Total_Belpov_e
-NYC.M.PCT_Belpov_s <- 100 * ifelse(NYC.M.PCT_Belpov_e != 100,
-                                 ifelse((NYC.M.Belpov_s^2 - ((NYC.M.Belpov_e / NYC.M.Total_Belpov_e)^2 * NYC.M.Total_Belpov_s^2)) > 0,
-                                        (1 / NYC.M.Total_Belpov_e) * ((NYC.M.Belpov_s^2 - ((NYC.M.Belpov_e / NYC.M.Total_Belpov_e)^2 * NYC.M.Total_Belpov_s^2))^0.5),
-                                        (1 / NYC.M.Total_Belpov_e) * ((NYC.M.Belpov_s^2 + ((NYC.M.Belpov_e / NYC.M.Total_Belpov_e)^2 * NYC.M.Total_Belpov_s^2))^0.5)),
-                                 NYC.M.Belpov_s / NYC.M.Total_Belpov_e)
-
-NYC.M.PCT_HH_Income_Bel75K_e <- 100 * NYC.M.HH_Income_Bel75K_e / NYC.M.Total_HH_Income_e
-NYC.M.PCT_HH_Income_Bel75K_s <- 100 * ifelse(NYC.M.PCT_HH_Income_Bel75K_e != 100,
-                                           ifelse((NYC.M.HH_Income_Bel75K_s^2 - ((NYC.M.HH_Income_Bel75K_e / NYC.M.Total_HH_Income_e)^2 * NYC.M.Total_HH_Income_s^2)) > 0,
-                                                  (1 / NYC.M.Total_HH_Income_e) * ((NYC.M.HH_Income_Bel75K_s^2 - ((NYC.M.HH_Income_Bel75K_e / NYC.M.Total_HH_Income_e)^2 * NYC.M.Total_HH_Income_s^2))^0.5),
-                                                  (1 / NYC.M.Total_HH_Income_e) * ((NYC.M.HH_Income_Bel75K_s^2 + ((NYC.M.HH_Income_Bel75K_e / NYC.M.Total_HH_Income_e)^2 * NYC.M.Total_HH_Income_s^2))^0.5)),
-                                           NYC.M.HH_Income_Bel75K_s / NYC.M.Total_HH_Income_e)
-
-NYC.M.PCT_HH_Disability_e <- 100 * NYC.M.HH_Disability_e / NYC.M.Total_HH_Dis_e
-NYC.M.PCT_HH_Disability_s <- 100 * ifelse(NYC.M.PCT_HH_Disability_e != 100,
-                                        ifelse((NYC.M.HH_Disability_s^2 - ((NYC.M.HH_Disability_e / NYC.M.Total_HH_Dis_e)^2 * NYC.M.Total_HH_Dis_s^2)) > 0,
-                                               (1 / NYC.M.Total_HH_Dis_e) * ((NYC.M.HH_Disability_s^2 - ((NYC.M.HH_Disability_e / NYC.M.Total_HH_Dis_e)^2 * NYC.M.Total_HH_Dis_s^2))^0.5),
-                                               (1 / NYC.M.Total_HH_Dis_e) * ((NYC.M.HH_Disability_s^2 + ((NYC.M.HH_Disability_e / NYC.M.Total_HH_Dis_e)^2 * NYC.M.Total_HH_Dis_s^2))^0.5)),
-                                        NYC.M.HH_Disability_s / NYC.M.Total_HH_Dis_e)
-
-NYC.M.PCT_RB_e <- 100 * NYC.M.RB_HH_e / NYC.M.Total_Rent_HH_e
-NYC.M.PCT_RB_s <- 100 * ifelse(NYC.M.PCT_RB_e != 100,
-                             ifelse((NYC.M.RB_HH_s^2 - ((NYC.M.RB_HH_e / NYC.M.Total_Rent_HH_e)^2 * NYC.M.Total_Rent_HH_s^2)) > 0,
-                                    (1 / NYC.M.Total_Rent_HH_e) * ((NYC.M.RB_HH_s^2 - ((NYC.M.RB_HH_e / NYC.M.Total_Rent_HH_e)^2 * NYC.M.Total_Rent_HH_s^2))^0.5),
-                                    (1 / NYC.M.Total_Rent_HH_e) * ((NYC.M.RB_HH_s^2 + ((NYC.M.RB_HH_e / NYC.M.Total_Rent_HH_e)^2 * NYC.M.Total_Rent_HH_s^2))^0.5)),
-                             NYC.M.RB_HH_s / NYC.M.Total_Rent_HH_e)
-
-NYC.M.PCT_CB_e <- 100 * NYC.M.CB_HH_e / NYC.M.Total_Owned_HH_e
-NYC.M.PCT_CB_s <- 100 * ifelse(NYC.M.PCT_CB_e != 100,
-                             ifelse((NYC.M.CB_HH_s^2 - ((NYC.M.CB_HH_e / NYC.M.Total_Owned_HH_e)^2 * NYC.M.Total_Owned_HH_s^2)) > 0,
-                                    (1 / NYC.M.Total_Owned_HH_e) * ((NYC.M.CB_HH_s^2 - ((NYC.M.CB_HH_e / NYC.M.Total_Owned_HH_e)^2 * NYC.M.Total_Owned_HH_s^2))^0.5),
-                                    (1 / NYC.M.Total_Owned_HH_e) * ((NYC.M.CB_HH_s^2 + ((NYC.M.CB_HH_e / NYC.M.Total_Owned_HH_e)^2 * NYC.M.Total_Owned_HH_s^2))^0.5)),
-                             NYC.M.CB_HH_s / NYC.M.Total_Owned_HH_e)
-
-## Moderate CityWide Unexposed
-
-NYC.M.N.Total_Belpov_e <- sum(final_table[,"M.N.Total_Belpov_e"])
-NYC.M.N.Total_Belpov_s <- (sum(final_table[,"M.N.Total_Belpov_s"]^2))^0.5
-NYC.M.N.Belpov_e <- sum(final_table[,"M.N.Belpov_e"])
-NYC.M.N.Belpov_s <- (sum(final_table[,"M.N.Belpov_s"]^2))^0.5
-
-NYC.M.N.Total_HH_Income_e <- sum(final_table[,"M.N.Total_HH_Income_e"])
-NYC.M.N.Total_HH_Income_s <- (sum(final_table[,"M.N.Total_HH_Income_s"]^2))^0.5
-NYC.M.N.HH_Income_Bel75K_e <- sum(final_table[,"M.N.HH_Income_Bel75K_e"])
-NYC.M.N.HH_Income_Bel75K_s <- (sum(final_table[,"M.N.HH_Income_Bel75K_s"]^2))^0.5
-
-NYC.M.N.Total_HH_Dis_e <- sum(final_table[,"M.N.Total_HH_Dis_e"])
-NYC.M.N.Total_HH_Dis_s <- (sum(final_table[,"M.N.Total_HH_Dis_s"]^2))^0.5
-NYC.M.N.HH_Disability_e <- sum(final_table[,"M.N.HH_Disability_e"])
-NYC.M.N.HH_Disability_s <- (sum(final_table[,"M.N.HH_Disability_s"]^2))^0.5
-
-NYC.M.N.Total_Rent_HH_e <- sum(final_table[,"M.N.Total_Rent_HH_e"])
-NYC.M.N.Total_Rent_HH_s <- (sum(final_table[,"M.N.Total_Rent_HH_s"]^2))^0.5
-NYC.M.N.RB_HH_e <- sum(final_table[,"M.N.RB_HH_e"])
-NYC.M.N.RB_HH_s <- (sum(final_table[,"M.N.RB_HH_s"]^2))^0.5
-
-NYC.M.N.Total_Owned_HH_e <- sum(final_table[,"M.N.Total_Owned_HH_e"])
-NYC.M.N.Total_Owned_HH_s <- (sum(final_table[,"M.N.Total_Owned_HH_s"]^2))^0.5
-NYC.M.N.CB_HH_e <- sum(final_table[,"M.N.CB_HH_e"])
-NYC.M.N.CB_HH_s <- (sum(final_table[,"M.N.CB_HH_s"]^2))^0.5
-
-NYC.M.N.PCT_Belpov_e <- 100 * NYC.M.N.Belpov_e / NYC.M.N.Total_Belpov_e
-NYC.M.N.PCT_Belpov_s <- 100 * ifelse(NYC.M.N.PCT_Belpov_e != 100,
-                                   ifelse((NYC.M.N.Belpov_s^2 - ((NYC.M.N.Belpov_e / NYC.M.N.Total_Belpov_e)^2 * NYC.M.N.Total_Belpov_s^2)) > 0,
-                                          (1 / NYC.M.N.Total_Belpov_e) * ((NYC.M.N.Belpov_s^2 - ((NYC.M.N.Belpov_e / NYC.M.N.Total_Belpov_e)^2 * NYC.M.N.Total_Belpov_s^2))^0.5),
-                                          (1 / NYC.M.N.Total_Belpov_e) * ((NYC.M.N.Belpov_s^2 + ((NYC.M.N.Belpov_e / NYC.M.N.Total_Belpov_e)^2 * NYC.M.N.Total_Belpov_s^2))^0.5)),
-                                   NYC.M.N.Belpov_s / NYC.M.N.Total_Belpov_e)
-
-NYC.M.N.PCT_HH_Income_Bel75K_e <- 100 * NYC.M.N.HH_Income_Bel75K_e / NYC.M.N.Total_HH_Income_e
-NYC.M.N.PCT_HH_Income_Bel75K_s <- 100 * ifelse(NYC.M.N.PCT_HH_Income_Bel75K_e != 100,
-                                             ifelse((NYC.M.N.HH_Income_Bel75K_s^2 - ((NYC.M.N.HH_Income_Bel75K_e / NYC.M.N.Total_HH_Income_e)^2 * NYC.M.N.Total_HH_Income_s^2)) > 0,
-                                                    (1 / NYC.M.N.Total_HH_Income_e) * ((NYC.M.N.HH_Income_Bel75K_s^2 - ((NYC.M.N.HH_Income_Bel75K_e / NYC.M.N.Total_HH_Income_e)^2 * NYC.M.N.Total_HH_Income_s^2))^0.5),
-                                                    (1 / NYC.M.N.Total_HH_Income_e) * ((NYC.M.N.HH_Income_Bel75K_s^2 + ((NYC.M.N.HH_Income_Bel75K_e / NYC.M.N.Total_HH_Income_e)^2 * NYC.M.N.Total_HH_Income_s^2))^0.5)),
-                                             NYC.M.N.HH_Income_Bel75K_s / NYC.M.N.Total_HH_Income_e)
-
-NYC.M.N.PCT_HH_Disability_e <- 100 * NYC.M.N.HH_Disability_e / NYC.M.N.Total_HH_Dis_e
-NYC.M.N.PCT_HH_Disability_s <- 100 * ifelse(NYC.M.N.PCT_HH_Disability_e != 100,
-                                          ifelse((NYC.M.N.HH_Disability_s^2 - ((NYC.M.N.HH_Disability_e / NYC.M.N.Total_HH_Dis_e)^2 * NYC.M.N.Total_HH_Dis_s^2)) > 0,
-                                                 (1 / NYC.M.N.Total_HH_Dis_e) * ((NYC.M.N.HH_Disability_s^2 - ((NYC.M.N.HH_Disability_e / NYC.M.N.Total_HH_Dis_e)^2 * NYC.M.N.Total_HH_Dis_s^2))^0.5),
-                                                 (1 / NYC.M.N.Total_HH_Dis_e) * ((NYC.M.N.HH_Disability_s^2 + ((NYC.M.N.HH_Disability_e / NYC.M.N.Total_HH_Dis_e)^2 * NYC.M.N.Total_HH_Dis_s^2))^0.5)),
-                                          NYC.M.N.HH_Disability_s / NYC.M.N.Total_HH_Dis_e)
-
-NYC.M.N.PCT_RB_e <- 100 * NYC.M.N.RB_HH_e / NYC.M.N.Total_Rent_HH_e
-NYC.M.N.PCT_RB_s <- 100 * ifelse(NYC.M.N.PCT_RB_e != 100,
-                               ifelse((NYC.M.N.RB_HH_s^2 - ((NYC.M.N.RB_HH_e / NYC.M.N.Total_Rent_HH_e)^2 * NYC.M.N.Total_Rent_HH_s^2)) > 0,
-                                      (1 / NYC.M.N.Total_Rent_HH_e) * ((NYC.M.N.RB_HH_s^2 - ((NYC.M.N.RB_HH_e / NYC.M.N.Total_Rent_HH_e)^2 * NYC.M.N.Total_Rent_HH_s^2))^0.5),
-                                      (1 / NYC.M.N.Total_Rent_HH_e) * ((NYC.M.N.RB_HH_s^2 + ((NYC.M.N.RB_HH_e / NYC.M.N.Total_Rent_HH_e)^2 * NYC.M.N.Total_Rent_HH_s^2))^0.5)),
-                               NYC.M.N.RB_HH_s / NYC.M.N.Total_Rent_HH_e)
-
-NYC.M.N.PCT_CB_e <- 100 * NYC.M.N.CB_HH_e / NYC.M.N.Total_Owned_HH_e
-NYC.M.N.PCT_CB_s <- 100 * ifelse(NYC.M.N.PCT_CB_e != 100,
-                               ifelse((NYC.M.N.CB_HH_s^2 - ((NYC.M.N.CB_HH_e / NYC.M.N.Total_Owned_HH_e)^2 * NYC.M.N.Total_Owned_HH_s^2)) > 0,
-                                      (1 / NYC.M.N.Total_Owned_HH_e) * ((NYC.M.N.CB_HH_s^2 - ((NYC.M.N.CB_HH_e / NYC.M.N.Total_Owned_HH_e)^2 * NYC.M.N.Total_Owned_HH_s^2))^0.5),
-                                      (1 / NYC.M.N.Total_Owned_HH_e) * ((NYC.M.N.CB_HH_s^2 + ((NYC.M.N.CB_HH_e / NYC.M.N.Total_Owned_HH_e)^2 * NYC.M.N.Total_Owned_HH_s^2))^0.5)),
-                               NYC.M.N.CB_HH_s / NYC.M.N.Total_Owned_HH_e)
-
-## Extreme CityWide
-
-NYC.E.Total_Belpov_e <- sum(final_table[,"E.Total_Belpov_e"])
-NYC.E.Total_Belpov_s <- (sum(final_table[,"E.Total_Belpov_s"]^2))^0.5
-NYC.E.Belpov_e <- sum(final_table[,"E.Belpov_e"])
-NYC.E.Belpov_s <- (sum(final_table[,"E.Belpov_s"]^2))^0.5
-
-NYC.E.Total_HH_Income_e <- sum(final_table[,"E.Total_HH_Income_e"])
-NYC.E.Total_HH_Income_s <- (sum(final_table[,"E.Total_HH_Income_s"]^2))^0.5
-NYC.E.HH_Income_Bel75K_e <- sum(final_table[,"E.HH_Income_Bel75K_e"])
-NYC.E.HH_Income_Bel75K_s <- (sum(final_table[,"E.HH_Income_Bel75K_s"]^2))^0.5
-
-NYC.E.Total_HH_Dis_e <- sum(final_table[,"E.Total_HH_Dis_e"])
-NYC.E.Total_HH_Dis_s <- (sum(final_table[,"E.Total_HH_Dis_s"]^2))^0.5
-NYC.E.HH_Disability_e <- sum(final_table[,"E.HH_Disability_e"])
-NYC.E.HH_Disability_s <- (sum(final_table[,"E.HH_Disability_s"]^2))^0.5
-
-NYC.E.Total_Rent_HH_e <- sum(final_table[,"E.Total_Rent_HH_e"])
-NYC.E.Total_Rent_HH_s <- (sum(final_table[,"E.Total_Rent_HH_s"]^2))^0.5
-NYC.E.RB_HH_e <- sum(final_table[,"E.RB_HH_e"])
-NYC.E.RB_HH_s <- (sum(final_table[,"E.RB_HH_s"]^2))^0.5
-
-NYC.E.Total_Owned_HH_e <- sum(final_table[,"E.Total_Owned_HH_e"])
-NYC.E.Total_Owned_HH_s <- (sum(final_table[,"E.Total_Owned_HH_s"]^2))^0.5
-NYC.E.CB_HH_e <- sum(final_table[,"E.CB_HH_e"])
-NYC.E.CB_HH_s <- (sum(final_table[,"E.CB_HH_s"]^2))^0.5
-
-NYC.E.PCT_Belpov_e <- 100 * NYC.E.Belpov_e / NYC.E.Total_Belpov_e
-NYC.E.PCT_Belpov_s <- 100 * ifelse(NYC.E.PCT_Belpov_e != 100,
-                                   ifelse((NYC.E.Belpov_s^2 - ((NYC.E.Belpov_e / NYC.E.Total_Belpov_e)^2 * NYC.E.Total_Belpov_s^2)) > 0,
-                                          (1 / NYC.E.Total_Belpov_e) * ((NYC.E.Belpov_s^2 - ((NYC.E.Belpov_e / NYC.E.Total_Belpov_e)^2 * NYC.E.Total_Belpov_s^2))^0.5),
-                                          (1 / NYC.E.Total_Belpov_e) * ((NYC.E.Belpov_s^2 + ((NYC.E.Belpov_e / NYC.E.Total_Belpov_e)^2 * NYC.E.Total_Belpov_s^2))^0.5)),
-                                   NYC.E.Belpov_s / NYC.E.Total_Belpov_e)
-
-NYC.E.PCT_HH_Income_Bel75K_e <- 100 * NYC.E.HH_Income_Bel75K_e / NYC.E.Total_HH_Income_e
-NYC.E.PCT_HH_Income_Bel75K_s <- 100 * ifelse(NYC.E.PCT_HH_Income_Bel75K_e != 100,
-                                             ifelse((NYC.E.HH_Income_Bel75K_s^2 - ((NYC.E.HH_Income_Bel75K_e / NYC.E.Total_HH_Income_e)^2 * NYC.E.Total_HH_Income_s^2)) > 0,
-                                                    (1 / NYC.E.Total_HH_Income_e) * ((NYC.E.HH_Income_Bel75K_s^2 - ((NYC.E.HH_Income_Bel75K_e / NYC.E.Total_HH_Income_e)^2 * NYC.E.Total_HH_Income_s^2))^0.5),
-                                                    (1 / NYC.E.Total_HH_Income_e) * ((NYC.E.HH_Income_Bel75K_s^2 + ((NYC.E.HH_Income_Bel75K_e / NYC.E.Total_HH_Income_e)^2 * NYC.E.Total_HH_Income_s^2))^0.5)),
-                                             NYC.E.HH_Income_Bel75K_s / NYC.E.Total_HH_Income_e)
-
-NYC.E.PCT_HH_Disability_e <- 100 * NYC.E.HH_Disability_e / NYC.E.Total_HH_Dis_e
-NYC.E.PCT_HH_Disability_s <- 100 * ifelse(NYC.E.PCT_HH_Disability_e != 100,
-                                          ifelse((NYC.E.HH_Disability_s^2 - ((NYC.E.HH_Disability_e / NYC.E.Total_HH_Dis_e)^2 * NYC.E.Total_HH_Dis_s^2)) > 0,
-                                                 (1 / NYC.E.Total_HH_Dis_e) * ((NYC.E.HH_Disability_s^2 - ((NYC.E.HH_Disability_e / NYC.E.Total_HH_Dis_e)^2 * NYC.E.Total_HH_Dis_s^2))^0.5),
-                                                 (1 / NYC.E.Total_HH_Dis_e) * ((NYC.E.HH_Disability_s^2 + ((NYC.E.HH_Disability_e / NYC.E.Total_HH_Dis_e)^2 * NYC.E.Total_HH_Dis_s^2))^0.5)),
-                                          NYC.E.HH_Disability_s / NYC.E.Total_HH_Dis_e)
-
-NYC.E.PCT_RB_e <- 100 * NYC.E.RB_HH_e / NYC.E.Total_Rent_HH_e
-NYC.E.PCT_RB_s <- 100 * ifelse(NYC.E.PCT_RB_e != 100,
-                               ifelse((NYC.E.RB_HH_s^2 - ((NYC.E.RB_HH_e / NYC.E.Total_Rent_HH_e)^2 * NYC.E.Total_Rent_HH_s^2)) > 0,
-                                      (1 / NYC.E.Total_Rent_HH_e) * ((NYC.E.RB_HH_s^2 - ((NYC.E.RB_HH_e / NYC.E.Total_Rent_HH_e)^2 * NYC.E.Total_Rent_HH_s^2))^0.5),
-                                      (1 / NYC.E.Total_Rent_HH_e) * ((NYC.E.RB_HH_s^2 + ((NYC.E.RB_HH_e / NYC.E.Total_Rent_HH_e)^2 * NYC.E.Total_Rent_HH_s^2))^0.5)),
-                               NYC.E.RB_HH_s / NYC.E.Total_Rent_HH_e)
-
-NYC.E.PCT_CB_e <- 100 * NYC.E.CB_HH_e / NYC.E.Total_Owned_HH_e
-NYC.E.PCT_CB_s <- 100 * ifelse(NYC.E.PCT_CB_e != 100,
-                               ifelse((NYC.E.CB_HH_s^2 - ((NYC.E.CB_HH_e / NYC.E.Total_Owned_HH_e)^2 * NYC.E.Total_Owned_HH_s^2)) > 0,
-                                      (1 / NYC.E.Total_Owned_HH_e) * ((NYC.E.CB_HH_s^2 - ((NYC.E.CB_HH_e / NYC.E.Total_Owned_HH_e)^2 * NYC.E.Total_Owned_HH_s^2))^0.5),
-                                      (1 / NYC.E.Total_Owned_HH_e) * ((NYC.E.CB_HH_s^2 + ((NYC.E.CB_HH_e / NYC.E.Total_Owned_HH_e)^2 * NYC.E.Total_Owned_HH_s^2))^0.5)),
-                               NYC.E.CB_HH_s / NYC.E.Total_Owned_HH_e)
-
-## Extreme Citiwide Unexposed
-
-NYC.E.N.Total_Belpov_e <- sum(final_table[,"E.N.Total_Belpov_e"])
-NYC.E.N.Total_Belpov_s <- (sum(final_table[,"E.N.Total_Belpov_s"]^2))^0.5
-NYC.E.N.Belpov_e <- sum(final_table[,"E.N.Belpov_e"])
-NYC.E.N.Belpov_s <- (sum(final_table[,"E.N.Belpov_s"]^2))^0.5
-
-NYC.E.N.Total_HH_Income_e <- sum(final_table[,"E.N.Total_HH_Income_e"])
-NYC.E.N.Total_HH_Income_s <- (sum(final_table[,"E.N.Total_HH_Income_s"]^2))^0.5
-NYC.E.N.HH_Income_Bel75K_e <- sum(final_table[,"E.N.HH_Income_Bel75K_e"])
-NYC.E.N.HH_Income_Bel75K_s <- (sum(final_table[,"E.N.HH_Income_Bel75K_s"]^2))^0.5
-
-NYC.E.N.Total_HH_Dis_e <- sum(final_table[,"E.N.Total_HH_Dis_e"])
-NYC.E.N.Total_HH_Dis_s <- (sum(final_table[,"E.N.Total_HH_Dis_s"]^2))^0.5
-NYC.E.N.HH_Disability_e <- sum(final_table[,"E.N.HH_Disability_e"])
-NYC.E.N.HH_Disability_s <- (sum(final_table[,"E.N.HH_Disability_s"]^2))^0.5
-
-NYC.E.N.Total_Rent_HH_e <- sum(final_table[,"E.N.Total_Rent_HH_e"])
-NYC.E.N.Total_Rent_HH_s <- (sum(final_table[,"E.N.Total_Rent_HH_s"]^2))^0.5
-NYC.E.N.RB_HH_e <- sum(final_table[,"E.N.RB_HH_e"])
-NYC.E.N.RB_HH_s <- (sum(final_table[,"E.N.RB_HH_s"]^2))^0.5
-
-NYC.E.N.Total_Owned_HH_e <- sum(final_table[,"E.N.Total_Owned_HH_e"])
-NYC.E.N.Total_Owned_HH_s <- (sum(final_table[,"E.N.Total_Owned_HH_s"]^2))^0.5
-NYC.E.N.CB_HH_e <- sum(final_table[,"E.N.CB_HH_e"])
-NYC.E.N.CB_HH_s <- (sum(final_table[,"E.N.CB_HH_s"]^2))^0.5
-
-NYC.E.N.PCT_Belpov_e <- 100 * NYC.E.N.Belpov_e / NYC.E.N.Total_Belpov_e
-NYC.E.N.PCT_Belpov_s <- 100 * ifelse(NYC.E.N.PCT_Belpov_e != 100,
-                                     ifelse((NYC.E.N.Belpov_s^2 - ((NYC.E.N.Belpov_e / NYC.E.N.Total_Belpov_e)^2 * NYC.E.N.Total_Belpov_s^2)) > 0,
-                                            (1 / NYC.E.N.Total_Belpov_e) * ((NYC.E.N.Belpov_s^2 - ((NYC.E.N.Belpov_e / NYC.E.N.Total_Belpov_e)^2 * NYC.E.N.Total_Belpov_s^2))^0.5),
-                                            (1 / NYC.E.N.Total_Belpov_e) * ((NYC.E.N.Belpov_s^2 + ((NYC.E.N.Belpov_e / NYC.E.N.Total_Belpov_e)^2 * NYC.E.N.Total_Belpov_s^2))^0.5)),
-                                     NYC.E.N.Belpov_s / NYC.E.N.Total_Belpov_e)
-
-NYC.E.N.PCT_HH_Income_Bel75K_e <- 100 * NYC.E.N.HH_Income_Bel75K_e / NYC.E.N.Total_HH_Income_e
-NYC.E.N.PCT_HH_Income_Bel75K_s <- 100 * ifelse(NYC.E.N.PCT_HH_Income_Bel75K_e != 100,
-                                               ifelse((NYC.E.N.HH_Income_Bel75K_s^2 - ((NYC.E.N.HH_Income_Bel75K_e / NYC.E.N.Total_HH_Income_e)^2 * NYC.E.N.Total_HH_Income_s^2)) > 0,
-                                                      (1 / NYC.E.N.Total_HH_Income_e) * ((NYC.E.N.HH_Income_Bel75K_s^2 - ((NYC.E.N.HH_Income_Bel75K_e / NYC.E.N.Total_HH_Income_e)^2 * NYC.E.N.Total_HH_Income_s^2))^0.5),
-                                                      (1 / NYC.E.N.Total_HH_Income_e) * ((NYC.E.N.HH_Income_Bel75K_s^2 + ((NYC.E.N.HH_Income_Bel75K_e / NYC.E.N.Total_HH_Income_e)^2 * NYC.E.N.Total_HH_Income_s^2))^0.5)),
-                                               NYC.E.N.HH_Income_Bel75K_s / NYC.E.N.Total_HH_Income_e)
-
-NYC.E.N.PCT_HH_Disability_e <- 100 * NYC.E.N.HH_Disability_e / NYC.E.N.Total_HH_Dis_e
-NYC.E.N.PCT_HH_Disability_s <- 100 * ifelse(NYC.E.N.PCT_HH_Disability_e != 100,
-                                            ifelse((NYC.E.N.HH_Disability_s^2 - ((NYC.E.N.HH_Disability_e / NYC.E.N.Total_HH_Dis_e)^2 * NYC.E.N.Total_HH_Dis_s^2)) > 0,
-                                                   (1 / NYC.E.N.Total_HH_Dis_e) * ((NYC.E.N.HH_Disability_s^2 - ((NYC.E.N.HH_Disability_e / NYC.E.N.Total_HH_Dis_e)^2 * NYC.E.N.Total_HH_Dis_s^2))^0.5),
-                                                   (1 / NYC.E.N.Total_HH_Dis_e) * ((NYC.E.N.HH_Disability_s^2 + ((NYC.E.N.HH_Disability_e / NYC.E.N.Total_HH_Dis_e)^2 * NYC.E.N.Total_HH_Dis_s^2))^0.5)),
-                                            NYC.E.N.HH_Disability_s / NYC.E.N.Total_HH_Dis_e)
-
-NYC.E.N.PCT_RB_e <- 100 * NYC.E.N.RB_HH_e / NYC.E.N.Total_Rent_HH_e
-NYC.E.N.PCT_RB_s <- 100 * ifelse(NYC.E.N.PCT_RB_e != 100,
-                                 ifelse((NYC.E.N.RB_HH_s^2 - ((NYC.E.N.RB_HH_e / NYC.E.N.Total_Rent_HH_e)^2 * NYC.E.N.Total_Rent_HH_s^2)) > 0,
-                                        (1 / NYC.E.N.Total_Rent_HH_e) * ((NYC.E.N.RB_HH_s^2 - ((NYC.E.N.RB_HH_e / NYC.E.N.Total_Rent_HH_e)^2 * NYC.E.N.Total_Rent_HH_s^2))^0.5),
-                                        (1 / NYC.E.N.Total_Rent_HH_e) * ((NYC.E.N.RB_HH_s^2 + ((NYC.E.N.RB_HH_e / NYC.E.N.Total_Rent_HH_e)^2 * NYC.E.N.Total_Rent_HH_s^2))^0.5)),
-                                 NYC.E.N.RB_HH_s / NYC.E.N.Total_Rent_HH_e)
-
-NYC.E.N.PCT_CB_e <- 100 * NYC.E.N.CB_HH_e / NYC.E.N.Total_Owned_HH_e
-NYC.E.N.PCT_CB_s <- 100 * ifelse(NYC.E.N.PCT_CB_e != 100,
-                                 ifelse((NYC.E.N.CB_HH_s^2 - ((NYC.E.N.CB_HH_e / NYC.E.N.Total_Owned_HH_e)^2 * NYC.E.N.Total_Owned_HH_s^2)) > 0,
-                                        (1 / NYC.E.N.Total_Owned_HH_e) * ((NYC.E.N.CB_HH_s^2 - ((NYC.E.N.CB_HH_e / NYC.E.N.Total_Owned_HH_e)^2 * NYC.E.N.Total_Owned_HH_s^2))^0.5),
-                                        (1 / NYC.E.N.Total_Owned_HH_e) * ((NYC.E.N.CB_HH_s^2 + ((NYC.E.N.CB_HH_e / NYC.E.N.Total_Owned_HH_e)^2 * NYC.E.N.Total_Owned_HH_s^2))^0.5)),
-                                 NYC.E.N.CB_HH_s / NYC.E.N.Total_Owned_HH_e)
-
-# Now write final CityWide row
+## Now we can create a list with ALL the variables that will be added to a final row in the final table
 
 NYC_row_data <- list("NYC", 
                   sum_NONA(final_table[,"Total_area"]),
-                  sum_NONA(final_table[,"M.Total_area"]),
-                  100 * sum_NONA(final_table[,"M.Total_area"]) / sum_NONA(final_table[,"Total_area"]),
-                  sum_NONA(final_table[,"E.Total_area"]),
-                  100 * sum_NONA(final_table[,"E.Total_area"]) / sum_NONA(final_table[,"Total_area"]),
                   sum_NONA(final_table[,"Total_road_area"]),
                   sum_NONA(final_table[,"M.Total_road_area"]),
                   100 * sum_NONA(final_table[,"M.Total_road_area"] / sum_NONA(final_table[,"Total_road_area"])),
                   sum_NONA(final_table[,"E.Total_road_area"]),
                   100 * sum_NONA(final_table[,"E.Total_road_area"] / sum_NONA(final_table[,"Total_road_area"])),
+                  sum_NONA(final_table[,"M.Total_area"]),
+                  sum_NONA(final_table[,"E.Total_area"]),
+                  100 * sum_NONA(final_table[,"M.Total_area"]) / sum_NONA(final_table[,"Total_area"]),
+                  100 * sum_NONA(final_table[,"E.Total_area"]) / sum_NONA(final_table[,"Total_area"]),
+
                   
                   sum_NONA(final_table[,"Total_population"]), 
                   sum_NONA(final_table[,"Total_black_population"]), 
@@ -1465,9 +1221,9 @@ NYC_row_data <- list("NYC",
                   NYC.E.N.PCT_CB_s
 )
 
-# lets break the final table, and save facility subgroup data separately. Otherwise my brain is exploding
+## noww we have all the exposure and vulnerability data in a single database. it is quite large, so I decided to set the chunk of columns related to facility types aside
 
-final_table_facility_subgroups <- final_table[,c(1,155:229)]
+final_table_facility_subgroups <- final_table[,c(1,155:229)] ## columns 155-229 correspond to the individual facility types
 
 write.csv(final_table_facility_subgroups,
           row.names = FALSE,
@@ -1483,718 +1239,6 @@ write.csv(final_table_NYC,
 
 gc()
 
-#### RUN THIS LINE TO SAVE AN NYC SUMMARY
+## and finally, here is a subscript that will generate a table for the paper - this script takes the NYC wide row and creates a summary table reporting the impacts of flooding across the entire city
+
 source("src/NYCF_summary_tables.R")
-
-### NOW WE RUN THIS TO CREATE INDEX DATA FOR M AND E SCENARIOS
-
-
-
-#### barplots // testing significance
-
-data_plot <- read_xlsx("C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/PostProcess_stormwater_analysis_final_database_NOSLR.xlsx", sheet = "ParaPlotear") %>%
-  rename_all(make.names) %>% filter(CD != "NYC")
-
-data_plot$Scenario <- factor(data_plot$Scenario, levels = c("Moderate", "Extreme", "Total"))
-
-plot.P_Area_Flooded <- ggplot(data_plot[data_plot$Scenario != "Total",], aes(fill = Scenario, y = PCT_Area_Flooded, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_text(aes(label=paste0(round((Area_Flooded/10000),1), "ha")), position=position_dodge(width=0.9), vjust=-0.4) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Total Area Flooded") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_blank(),
-        # axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-
-plot.P_TotPop_Flooded <- ggplot(data_plot[data_plot$Scenario != "Total",],
-                                aes(fill = Scenario, y = PCT_Total_Population, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_text(aes(label=Total_Population), position=position_dodge(width=0.9), vjust=-0.4) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Total Population \n Impacted") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        # axis.text.x = element_blank(),
-        # axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-plot.P_Res_Flooded <- ggplot(data_plot[data_plot$Scenario != "Total",],
-                              aes(fill = Scenario, y = PCT_Residential_Lots, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_text(aes(label=Residential_Lots), position=position_dodge(width=0.9), vjust=-0.4) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Residential Lots Impacted") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_blank(),
-        axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-
-plot.P_ResBsmnt_Flooded <- ggplot(data_plot[data_plot$Scenario != "Total",],
-                             aes(fill = Scenario, y = PCT_Residential_Lots_Below_Grade_Basement, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_text(aes(label=Residential_Lots_Below_Grade_Basement), position=position_dodge(width=0.9), vjust=-0.4) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Residential Lots With A \n BG Basement Impacted") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_blank(),
-        axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-plot.P_Mixed_Floded <- ggplot(data_plot[data_plot$Scenario != "Total",],
-                              aes(fill = Scenario, y = PCT_Mixed_Residential_Commercial_Lots, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_text(aes(label=Mixed_Residential_Commercial_lots), position=position_dodge(width=0.9), vjust=-0.4) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Mixed Residential & Commercial \n Lots Impacted") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_blank(),
-        axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-plot.P_Commercial_Flooded <- ggplot(data_plot[data_plot$Scenario != "Total",],
-                                    aes(fill = Scenario, y = PCT_Commercial_Lots, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_text(aes(label=Commercial_Lots), position=position_dodge(width=0.9), vjust=-0.4) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Commercial Lots Impacted") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        # axis.text.x = element_blank(),
-        # axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-
-plot.P_Industrial_Flooded <- ggplot(data_plot[data_plot$Scenario != "Total",],
-                                    aes(fill = Scenario, y = PCT_Industrial_Lots, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_text(aes(label=Industrial_Lots), position=position_dodge(width=0.9), vjust=-0.4) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Industrial Lots Impacted") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        # axis.text.x = element_blank(),
-        # axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-frame <- ggarrange(plot.P_Res_Flooded,
-                   plot.P_ResBsmnt_Flooded, 
-                   plot.P_Mixed_Floded,
-                   plot.P_Commercial_Flooded,
-                   plot.P_Industrial_Flooded,
-                   plot.P_TotPop_Flooded,
-                   common.legend = TRUE, nrow = 2, ncol = 3, label.y = 1, legend = "bottom", align = "hv") %>%
-  annotate_figure(top = text_grob("\n Land Use Exposure Indicators and Population Impacted Per Community District \n", 
-                                  color = "black", face = "bold", size = 25))
-
-frame %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/barplots_LU_exposure.png", width = 1282, height = 1300) 
-
-plot.P_Road_Flooded <- ggplot(data_plot[data_plot$Scenario != "Total",], 
-                              aes(fill = Scenario, y = PCT_Road_Area_Flooded, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_text(aes(label=paste0(round((Road_Area_Flooded/10000),1), "ha")), position=position_dodge(width=0.9), vjust=-0.4) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Road Area Flooded") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_blank(),
-        axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-plot.P_Bus_Stops <- ggplot(data_plot[data_plot$Scenario != "Total",], 
-                               aes(fill = Scenario, y = PCT_Bus_Stops, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_text(aes(label=Bus_Stops), position=position_dodge(width=0.9), vjust=-0.4) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Bus Stops Impacted") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_blank(),
-        axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-plot.P_Bus_Routes <- ggplot(data_plot[data_plot$Scenario != "Total",], 
-                            aes(fill = Scenario, y = PCT_Bus_Routes, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_text(aes(label=Bus_Routes), position=position_dodge(width=0.9), vjust=-0.4) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Bus Routes Impacted") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        # axis.text.x = element_blank(),
-        # axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-plot.Subway_Entrances <- ggplot(data_plot[data_plot$Scenario != "Total",], 
-                                aes(fill = Scenario, y = PCT_Subway_Entrances, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_text(aes(label=Subway_Entrances), position=position_dodge(width=0.9), vjust=-0.4) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Subway Entrances Impacted") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        #axis.text.x = element_blank(),
-        # axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-frame <- ggarrange(plot.P_Road_Flooded,
-                   plot.P_Bus_Stops, 
-                   plot.P_Bus_Routes,
-                   plot.Subway_Entrances,
-                   common.legend = TRUE, nrow = 2, ncol = 2, label.y = 1, legend = "bottom", align = "hv") %>%
-  annotate_figure(top = text_grob("\n Transportation Exposure Indicators Per Community District \n", 
-                                  color = "black", face = "bold", size = 25))
-
-frame %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/barplots_Transport_exposure.png", width = 1282, height = 1300) 
-
-plot.P_Fac_Public_Safety <- ggplot(data_plot[data_plot$Scenario != "Total",],
-                                  aes(fill = Scenario, y = PCT_Public_Safety_Facilities, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_text(aes(label=Emergency_and_Public_Safety_Facilities), position=position_dodge(width=0.9), vjust=-0.4) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Public Safety \n Facilities Impacted") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_blank(),
-        axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-plot.P_Fac_Healthcare <- ggplot(data_plot[data_plot$Scenario != "Total",],
-                         aes(fill = Scenario, y = PCT_Healthcare_Facilities, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_text(aes(label=Healthcare_Facilities), position=position_dodge(width=0.9), vjust=-0.4) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Healthcare \n Facilities Impacted") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_blank(),
-        axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-plot.P_Fac_Education <- ggplot(data_plot[data_plot$Scenario != "Total",],
-                            aes(fill = Scenario, y = PCT_Education_Facilities, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_text(aes(label=Education_Facilities), position=position_dodge(width=0.9), vjust=-0.4) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Education \n Facilities Impacted") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        # axis.text.x = element_blank(),
-        # axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-plot.P_Fac_Welfare <- ggplot(data_plot[data_plot$Scenario != "Total",],
-                           aes(fill = Scenario, y = PCT_Human_Welfare_Services_Facilities, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_text(aes(label=Human_Welfare_Services_Facilities), position=position_dodge(width=0.9), vjust=-0.4) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Human Welfare \n Facilities Impacted") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        # axis.text.x = element_blank(),
-        # axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-frame <- ggarrange(plot.P_Fac_Public_Safety,
-                   plot.P_Fac_Healthcare, 
-                   plot.P_Fac_Education,
-                   plot.P_Fac_Welfare,
-                   common.legend = TRUE, nrow = 2, ncol = 2, label.y = 1, legend = "bottom", align = "hv") %>%
-  annotate_figure(top = text_grob("\n Critical Facilities Exposure Indicators Per Community District \n", 
-                                  color = "black", face = "bold", size = 25))
-
-frame %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/barplots_Facilities_exposure.png", width = 1282, height = 1300) 
-
-
-
-frame <- ggarrange(plot.P_Road_Flooded, 
-                   plot.P_Res_Flooded,
-                   plot.P_ResBsmnt_Flooded, 
-                   plot.P_EmFac_Flooded, 
-                   plot.P_HealthEdFac_Flooded,
-                   common.legend = TRUE, nrow = 2, ncol = 3, label.y = 1, legend = "bottom", align = "hv") %>%
-  annotate_figure(top = text_grob("\n Exposure Indicators Per Community District \n", 
-                                  color = "black", face = "bold", size = 25))
-
-
-frame %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/barplots_exposure.png", width = 1282, height = 1300) 
-
-
-plot.P_Children_Flooded <- ggplot(data_plot,
-                                aes(fill = Scenario, y = PCT_Children, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Children") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_blank(),
-        axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-plot.P_Elderly_Flooded <- ggplot(data_plot,
-                                  aes(fill = Scenario, y = PCT_Elderly, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Elderly") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-plot.P_AfAm_Flooded <- ggplot(data_plot,
-                                 aes(fill = Scenario, y = PCT_African_American, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% African American") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-plot.P_Hisp_Flooded <- ggplot(data_plot,
-                                 aes(fill = Scenario, y = PCT_Hispanic_Latinx, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Hispanic / Latinx Impacted") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-plot.P_White_Flooded <- ggplot(data_plot,
-                              aes(fill = Scenario, y = PCT_White, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% White") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-plot.PovRate <- ggplot(data_plot,
-                               aes(fill = Scenario, y = PovRate_e, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_errorbar(aes(ymin = PovRate_e - PovRate_s, ymax = PovRate_e + PovRate_s), 
-                width = 0.2, position=position_dodge(.9)) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Population Below Poverty") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-plot.PCT_NoCar <- ggplot(data_plot,
-                       aes(fill = Scenario, y = PCT_NoCar_e, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_errorbar(aes(ymin = PCT_NoCar_e - PCT_NoCar_s, ymax = PCT_NoCar_e + PCT_NoCar_s), 
-                width = 0.2, position=position_dodge(.9)) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Households Without a Car") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-plot.PCT_Rented <- ggplot(data_plot,
-       aes(fill = Scenario, y = PCT_Rented_e, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_errorbar(aes(ymin = PCT_Rented_e - PCT_Rented_s, ymax = PCT_Rented_e + PCT_Rented_s), 
-                width = 0.2, position=position_dodge(.9)) +
-  scale_fill_manual(values=c('#3485AD','#004466', "#777678")) + 
-  labs( x="Community District", y = "% Occupied Households Rented") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        text=element_text(size=20),
-        legend.title = element_text(size=20, face = "bold"),
-        legend.text = element_text(size=18),
-        axis.title=element_text(size=18))
-
-frame <- ggarrange(plot.P_Children_Flooded,
-                   plot.P_Elderly_Flooded, 
-                   plot.P_AfAm_Flooded,
-                   plot.P_Hisp_Flooded,
-                   plot.P_White_Flooded,
-                   plot.PovRate,
-                   plot.PCT_NoCar,
-                   plot.PCT_Rented,
-                   common.legend = TRUE, nrow = 4, ncol = 2, label.y = 1, legend = "bottom", align = "hv") %>%
-  annotate_figure(top = text_grob("\n Social Vulnerability Indicators Per Community District \n", 
-                                  color = "black", face = "bold", size = 25))
-
-frame %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/barplots_sv_demo.png", width = 1282, height = 1300) 
-
-
-data_acs_test <- data_plot[, grepl(c("CD|Scenario|_e|_s"), names(data_plot))]
-
-df_sig_test <- data.frame(CD = unique(data_acs_test$CD))
-
-Mod_Ext <- c("Moderate", "Extreme")
-Mod_Tot <- c("Moderate", "Total")
-Ext_Tot <- c("Extreme", "Total")
-
-for(CD in unique(df_sig_test$CD)){
-  
-  for(estimate in names(data_acs_test[grepl("_e", names(data_acs_test))])){
-    
-    estimate_2 <- str_remove(estimate, "_e")
-    
-    data_estimate <- cbind(select(data_acs_test, c(CD, Scenario)), data_acs_test[, grepl(estimate_2, names(data_acs_test))])
-    
-    A <- as.numeric(data_acs_test[data_acs_test$CD == CD & data_acs_test$Scenario == Mod_Ext[1], estimate])
-    B <- as.numeric(data_acs_test[data_acs_test$CD == CD & data_acs_test$Scenario == Mod_Ext[2], estimate])
-    SE_A <- as.numeric(data_acs_test[data_acs_test$CD == CD & data_acs_test$Scenario == Mod_Ext[1], paste0(estimate_2, "_s")])
-    SE_B <- as.numeric(data_acs_test[data_acs_test$CD == CD & data_acs_test$Scenario == Mod_Ext[2], paste0(estimate_2, "_s")])
-                       
-    Z_Mod_Ext <- (A-B)/((SE_A^2 + SE_B^2)^0.5)
-    
-    A <- as.numeric(data_acs_test[data_acs_test$CD == CD & data_acs_test$Scenario == Mod_Tot[1], estimate])
-    B <- as.numeric(data_acs_test[data_acs_test$CD == CD & data_acs_test$Scenario == Mod_Tot[2], estimate])
-    SE_A <- as.numeric(data_acs_test[data_acs_test$CD == CD & data_acs_test$Scenario == Mod_Tot[1], paste0(estimate_2, "_s")])
-    SE_B <- as.numeric(data_acs_test[data_acs_test$CD == CD & data_acs_test$Scenario == Mod_Tot[2], paste0(estimate_2, "_s")])
-    
-    Z_Mod_Tot <- (A-B)/((SE_A^2 + SE_B^2)^0.5)
-    
-    A <- as.numeric(data_acs_test[data_acs_test$CD == CD & data_acs_test$Scenario == Ext_Tot[1], estimate])
-    B <- as.numeric(data_acs_test[data_acs_test$CD == CD & data_acs_test$Scenario == Ext_Tot[2], estimate])
-    SE_A <- as.numeric(data_acs_test[data_acs_test$CD == CD & data_acs_test$Scenario == Ext_Tot[1], paste0(estimate_2, "_s")])
-    SE_B <- as.numeric(data_acs_test[data_acs_test$CD == CD & data_acs_test$Scenario == Ext_Tot[2], paste0(estimate_2, "_s")])
-    
-    Z_Ext_Tot <- (A-B)/((SE_A^2 + SE_B^2)^0.5)
-    
-    df_sig_test[df_sig_test$CD == CD, paste0(estimate_2, "_", Mod_Ext[1],"_", Mod_Ext[2])] <- Z_Mod_Ext
-    df_sig_test[df_sig_test$CD == CD, paste0(estimate_2, "_", Mod_Tot[1],"_", Mod_Tot[2])] <- Z_Mod_Tot
-    df_sig_test[df_sig_test$CD == CD, paste0(estimate_2, "_", Ext_Tot[1],"_", Ext_Tot[2])] <- Z_Ext_Tot
-  }
-  
-}
-
-
-# Now the same step but prepping a dataset with the SOVI data of ALL the CDs
-
-final_table <- read_csv("C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/stormwater_analysis_final_database_NOSLR.csv") %>% 
-  filter(Geography != "NYC")
-
-template <- data.frame(CD = final_table$Geography)
-
-# moderate
-
-moderate <- template %>%
-  mutate(Scenario = "Moderate",
-         PCT_Children = final_table$`M.Flooded PCT 0-5 children`,
-         PCT_Elderly = final_table$`M.Flooded PCT +65 elder`,
-         PCT_African_American = final_table$`M.Flooded PCT Black`,
-         PCT_Hispanic_Latinx = final_table$`M.Flooded PCT Hispanic`,
-         PCT_White = final_table$`M.Flooded PCT White`,
-         PovRate_e = final_table$M.Pov_rate_e,
-         PovRate_s = final_table$M.Pov_rate_s,
-         PCT_NoCar_e = final_table$M.PCT_No_Car_e,
-         PCT_NoCar_s = final_table$M.PCT_No_Car_s,
-         PCT_Rented_e = final_table$M.PCT_rented_e,
-         PCT_Rented_s = final_table$M.PCT_rented_s)
-
-moderate_unexposed <- template %>%
-  mutate(Scenario = "Moderate Unexposed",
-         PCT_Children = final_table$`M.N.Flooded PCT 0-5 children`,
-         PCT_Elderly = final_table$`M.N.Flooded PCT +65 elder`,
-         PCT_African_American = final_table$`M.N.Flooded PCT Black`,
-         PCT_Hispanic_Latinx = final_table$`M.N.Flooded PCT Hispanic`,
-         PCT_White = final_table$`M.N.Flooded PCT White`,
-         PovRate_e = final_table$M.N.Pov_rate_e,
-         PovRate_s = final_table$M.N.Pov_rate_s,
-         PCT_NoCar_e = final_table$M.N.PCT_No_Car_e,
-         PCT_NoCar_s = final_table$M.N.PCT_No_Car_s,
-         PCT_Rented_e = final_table$M.N.PCT_rented_e,
-         PCT_Rented_s = final_table$M.N.PCT_rented_s)
-
-# extreme
-
-extreme <- template %>%
-  mutate(Scenario = "Extreme",
-         PCT_Children = final_table$`E.Flooded PCT 0-5 children`,
-         PCT_Elderly = final_table$`E.Flooded PCT +65 elder`,
-         PCT_African_American = final_table$`E.Flooded PCT Black`,
-         PCT_Hispanic_Latinx = final_table$`E.Flooded PCT Hispanic`,
-         PCT_White = final_table$`E.Flooded PCT White`,
-         PovRate_e = final_table$E.Pov_rate_e,
-         PovRate_s = final_table$E.Pov_rate_s,
-         PCT_NoCar_e = final_table$E.PCT_No_Car_e,
-         PCT_NoCar_s = final_table$E.PCT_No_Car_s,
-         PCT_Rented_e = final_table$E.PCT_rented_e,
-         PCT_Rented_s = final_table$E.PCT_rented_s)
-
-extreme_unexposed <- template %>%
-  mutate(Scenario = "Extreme Unexposed",
-         PCT_Children = final_table$`E.N.Flooded PCT 0-5 children`,
-         PCT_Elderly = final_table$`E.N.Flooded PCT +65 elder`,
-         PCT_African_American = final_table$`E.N.Flooded PCT Black`,
-         PCT_Hispanic_Latinx = final_table$`E.N.Flooded PCT Hispanic`,
-         PCT_White = final_table$`E.N.Flooded PCT White`,
-         PovRate_e = final_table$E.N.Pov_rate_e,
-         PovRate_s = final_table$E.N.Pov_rate_s,
-         PCT_NoCar_e = final_table$E.N.PCT_No_Car_e,
-         PCT_NoCar_s = final_table$E.N.PCT_No_Car_s,
-         PCT_Rented_e = final_table$E.N.PCT_rented_e,
-         PCT_Rented_s = final_table$E.N.PCT_rented_s)
-
-# total
-
-total <- template %>%
-  mutate(Scenario = "Total",
-         PCT_Children = final_table$`PCT 0-5 children`,
-         PCT_Elderly = final_table$`PCT +65 elder`,
-         PCT_African_American = final_table$`PCT Black`,
-         PCT_Hispanic_Latinx = final_table$`PCT Hispanic`,
-         PCT_White = final_table$`PCT White`,
-         PovRate_e = final_table$Pov_rate_e,
-         PovRate_s = final_table$Pov_rate_s,
-         PCT_NoCar_e = final_table$PCT_No_Car_e,
-         PCT_NoCar_s = final_table$PCT_No_Car_s,
-         PCT_Rented_e = final_table$PCT_rented_e,
-         PCT_Rented_s = final_table$PCT_rented_s)
-
-SOVI_plot_m <- rbind(moderate, moderate_unexposed, total)
-
-SOVI_plot_m$Scenario <- factor(SOVI_plot_m$Scenario, levels = c("Moderate", 
-                                                            "Moderate Unexposed", 
-                                                            "Extreme",
-                                                            "Extreme Unexposed",
-                                                            "Total"))
-
-SOVI_plot.P_Children_Flooded <- ggplot(SOVI_plot_m,
-                                  aes(fill = Scenario, y = PCT_Children, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  scale_fill_manual(values=c('#3485AD','#ADBC7A', "#777678")) + 
-  labs( x="\n Community District", y = "% Children \n") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        # axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=28, face = "bold"),
-        legend.text = element_text(size=24),
-        axis.title=element_text(size=30),
-        legend.position = "bottom")
-
-SOVI_plot.P_Children_Flooded %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/m_exposure_barplots_sv_all_children.png", width = 2000, height = 800) 
-
-SOVI_plot.P_Elderly_Flooded <- ggplot(SOVI_plot_m,
-                                       aes(fill = Scenario, y = PCT_Elderly, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  scale_fill_manual(values=c('#3485AD','#ADBC7A', "#777678")) + 
-  labs( x="\n Community District", y = "% Elderly \n") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        # axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=28, face = "bold"),
-        legend.text = element_text(size=24),
-        axis.title=element_text(size=30),
-        legend.position = "bottom")
-
-SOVI_plot.P_Elderly_Flooded %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/m_exposure_barplots_sv_all_elderly.png", width = 2000, height = 800) 
-
-SOVI_plot.P_AfAm_Flooded <- ggplot(SOVI_plot_m,
-                                      aes(fill = Scenario, y = PCT_African_American, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  scale_fill_manual(values=c('#3485AD', '#ADBC7A', "#777678")) + 
-  labs( x="\n Community District", y = "% African American \n") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        # axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=28, face = "bold"),
-        legend.text = element_text(size=24),
-        axis.title=element_text(size=30),
-        legend.position = "bottom")
-
-SOVI_plot.P_AfAm_Flooded %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/m_exposure_barplots_sv_all_AfAm.png", width = 2000, height = 800) 
-
-SOVI_plot.P_Hisp_Flooded <- ggplot(SOVI_plot_m,
-                                   aes(fill = Scenario, y = PCT_Hispanic_Latinx, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  scale_fill_manual(values=c('#3485AD','#ADBC7A', "#777678")) + 
-  labs( x="\n Community District", y = "% Hispanic / Latinx \n") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        # axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=28, face = "bold"),
-        legend.text = element_text(size=24),
-        axis.title=element_text(size=30),
-        legend.position = "bottom")
-
-SOVI_plot.P_Hisp_Flooded %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/m_exposure_barplots_sv_all_Hisp.png", width = 2000, height = 800) 
-
-SOVI_plot.P_White_Flooded <- ggplot(SOVI_plot_m,
-                                   aes(fill = Scenario, y = PCT_White, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  scale_fill_manual(values=c('#3485AD', '#ADBC7A', "#777678")) + 
-  labs( x="\n Community District", y = "% White \n") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        # axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=28, face = "bold"),
-        legend.text = element_text(size=24),
-        axis.title=element_text(size=30),
-        legend.position = "bottom")
-
-SOVI_plot.P_White_Flooded %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/m_exposure_barplots_sv_all_White.png", width = 2000, height = 800) 
-
-SOVI_plot.PovRate <- ggplot(SOVI_plot_m,
-                       aes(fill = Scenario, y = PovRate_e, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_errorbar(aes(ymin = PovRate_e - PovRate_s, ymax = PovRate_e + PovRate_s), 
-                width = 0.2, position=position_dodge(.9)) +
-  scale_fill_manual(values=c('#3485AD', '#ADBC7A', "#777678")) + 
-  labs( x="\n Community District", y = "% Population Below Poverty \n") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        # axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=28, face = "bold"),
-        legend.text = element_text(size=24),
-        axis.title=element_text(size=30),
-        legend.position = "bottom")
-
-SOVI_plot.PovRate %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/m_exposure_barplots_sv_all_Poverty.png", width = 2000, height = 800) 
-
-SOVI_plot.PCT_NoCar <- ggplot(SOVI_plot_m,
-                       aes(fill = Scenario, y = PCT_NoCar_e, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_errorbar(aes(ymin = PCT_NoCar_e - PCT_NoCar_s, ymax = PCT_NoCar_e + PCT_NoCar_s), 
-                width = 0.2, position=position_dodge(.9)) +
-  scale_fill_manual(values=c('#3485AD','#ADBC7A', "#777678")) + 
-  labs( x="\n Community District", y = "% Households Without a Car \n") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        # axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=28, face = "bold"),
-        legend.text = element_text(size=24),
-        axis.title=element_text(size=30),
-        legend.position = "bottom")
-
-SOVI_plot.PCT_NoCar %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/m_exposure_barplots_sv_all_NoCar.png", width = 2000, height = 800) 
-
-SOVI_plot.PCT_Rented <- ggplot(SOVI_plot_m,
-                              aes(fill = Scenario, y = PCT_NoCar_e, x = CD)) +
-  geom_bar(position="dodge", stat="identity") +
-  geom_errorbar(aes(ymin = PCT_NoCar_e - PCT_NoCar_s, ymax = PCT_NoCar_e + PCT_NoCar_s), 
-                width = 0.2, position=position_dodge(.9)) +
-  scale_fill_manual(values=c('#3485AD','#ADBC7A', "#777678")) + 
-  labs( x="\n Community District", y = "% Rented Households \n") +
-  theme_classic() +
-  theme(panel.border = element_blank(),
-        legend.background = element_rect(color = NA),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1),
-        # axis.title.x = element_blank(),
-        text=element_text(size=20),
-        legend.title = element_text(size=28, face = "bold"),
-        legend.text = element_text(size=24),
-        axis.title=element_text(size=30),
-        legend.position = "bottom")
-
-SOVI_plot.PCT_Rented %>% ggexport(filename = "C:/Users/herrerop/Desktop/GIS/NYC_STORMWATER/StormWater_project/report_redo/display/m_exposure_barplots_sv_all_Rented.png", width = 2000, height = 800) 
