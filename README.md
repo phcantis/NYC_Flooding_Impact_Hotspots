@@ -48,8 +48,15 @@ The following datasets are used as raw-input to the analysis. Note that some of 
 | Building Footprints | Building_Footprints_20250507.geojson | [NYC Open Data](https://data.cityofnewyork.us/City-Government/Building-Footprints-Map-/jh45-qr5r) | 
 | Tax Lots - 2020v3 | MapPLUTO.shp | [NYC Planning](https://www.nyc.gov/content/planning/pages/resources/datasets/mappluto-pluto-change) | 
 | Roads | geo_export_4443d165-7281-4b57-a1a1-f651c232b7ab.shp | [NYC Open Data](https://data.cityofnewyork.us/City-Government/Centerline/3mf9-qshr) | 
-| Bus Routes | bus_routes_nyc_nov2020.shp | [Baruch's GIS Data Repository](https://www.baruch.cuny.edu/confluence/display/geoportal/)* | 
+| Bus Routes - 2020| bus_routes_nyc_nov2020.shp | [Baruch's GIS Data Repository](https://www.baruch.cuny.edu/confluence/display/geoportal/)* | 
+| Bus Stops - 2020| bus_stops_nyc_nov2020.shp | [Baruch's GIS Data Repository](https://www.baruch.cuny.edu/confluence/display/geoportal/)* | 
+| Community Districts | Community_Districts.shp | [NYC Planning](https://www.nyc.gov/content/planning/pages/resources/datasets/community-districts) | 
+| NY State 2022 Social Vulnerability Index - CDC  | SVI2022_NEWYORK_tract.gdb | [CDC - ASTDR](https://www.atsdr.cdc.gov/place-health/php/svi/svi-data-documentation-download.html) | 
+| Flooding Hazard - Moderate Scenario  | NYC_Stormwater_Flood_Map_-_Moderate_Flood.gdb | [NYC Open Data](https://data.cityofnewyork.us/Environment/NYC-Stormwater-Flood-Maps/9i7c-xyvv/about_data) | 
+| Flooding Hazard - Extreme Scenario  | NYC_Stormwater_Flood_Map_-_Extreme_Flood.gdb | [NYC Open Data](https://data.cityofnewyork.us/Environment/NYC-Stormwater-Flood-Maps/9i7c-xyvv/about_data) | 
 | Critical Infrastructures and Services | Facilities_20210811.shp | [NYC Open Data](https://data.cityofnewyork.us/City-Government/Facilities-Database/ji82-xba5/about_data) | 
 | Subway Entrances | geo_export_a9ca2d05-28dc-4a51-9b65-7e17888f49ec.shp | [MTA](https://data.ny.gov/Transportation/MTA-Subway-Entrances-and-Exits-2024/i9wp-a4ja/about_data) | 
 | American Community Survey Data - 2018 5-year estimates at the census block group level (social vulnerability data)  | NYC_2018_ACS.geojson | [US Census Bureau](https://data.census.gov/) | 
 | Decennial Census data - 2010 at the census block level (social vulnerability data)  | NYC_2010_decennial_census.geojson | [US Census Bureau](https://data.census.gov/) | 
+
+* Baruch's GIS Data Repository requires credentials to access 2020 data, but similar datasets for bus routes and bus stops are available for 2019 at - https://archive.nyu.edu/handle/2451/60058
