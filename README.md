@@ -40,7 +40,7 @@ The analysis counts with 3 key steps, which are run sequentially to feed from th
 **3) Plotting:** The scripts ```NYCF_Plotting_Schematic.R``` and ```NYCF_Plotting_Maps.R``` produce the bar plots and maps included in the manuscript and its Supplementary Materials.
 
 ## 📄 Data References
-
+ 
 The following datasets are used as raw-input to the analysis:
 
 | Dataset  | File Name (data/1_raw/) | Source |
