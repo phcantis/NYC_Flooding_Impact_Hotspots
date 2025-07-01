@@ -41,12 +41,13 @@ The analysis counts with 3 key steps, which are run sequentially to feed from th
 
 ## 📄 Data References
  
-The following datasets are used as raw-input to the analysis:
+The following datasets are used as raw-input to the analysis. Note that some of the links provided lead to updated versions of the datasets. 
 
 | Dataset  | File Name (data/1_raw/) | Source |
 | ------------- | ------------- | ------------- |
 | Building Footprints  | Building_Footprints_20250507.geojson  | [NYC Open Data](https://data.cityofnewyork.us/City-Government/Building-Footprints-Map-/jh45-qr5r) | 
 | Tax Lots - 2020v3 | MapPLUTO.shp | [NYC Planning](https://www.nyc.gov/content/planning/pages/resources/datasets/mappluto-pluto-change) | 
 | Roads | geo_export_4443d165-7281-4b57-a1a1-f651c232b7ab.shp | [NYC Open Data](https://data.cityofnewyork.us/City-Government/Centerline/3mf9-qshr) | 
+| Subway Entrances | geo_export_a9ca2d05-28dc-4a51-9b65-7e17888f49ec.shp | [MTA](https://data.ny.gov/Transportation/MTA-Subway-Entrances-and-Exits-2024/i9wp-a4ja/about_data) | 
 | American Community Survey Data - 2018 5-year estimates at the census block group level (social vulnerability data)  | NYC_2018_ACS.geojson | [US Census Bureau](https://data.census.gov/) | 
 | Decennial Census data - 2010 (social vulnerability data)  | NYC_2010_decennial_census.geojson | [US Census Bureau](https://data.census.gov/) | 
