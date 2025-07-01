@@ -45,5 +45,5 @@ The following datasets are used as raw-input to the analysis:
 
 | Dataset  | File Name (data/1_raw/) | Source |
 | ------------- | ------------- | ------------- |
-| Building Footprints  | Building_Footprints_20250507.geojson  | [NYC Open Data]([[url](https://data.cityofnewyork.us/City-Government/Building-Footprints-Map-/jh45-qr5r)])) | 
+| Building Footprints  | Building_Footprints_20250507.geojson  | [NYC Open Data]([url](https://data.cityofnewyork.us/City-Government/Building-Footprints-Map-/jh45-qr5r)) | 
 | Content Cell  | Content Cell  | | 
