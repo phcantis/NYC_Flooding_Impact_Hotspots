@@ -44,6 +44,6 @@ The analysis counts with 3 key steps, which are run sequentially to feed from th
 The following datasets are used as raw-input to the analysis:
 
 | Dataset  | File Name (data/1_raw/) | Source |
-| ------------- | ------------- | | 
-| Content Cell  | Content Cell  | | 
+| ------------- | ------------- | ------------- |
+| Building Footprints  | Building_Footprints_20250507.geojson  | [NYC Open Data]([url](https://data.cityofnewyork.us/City-Government/Building-Footprints-Map-/jh45-qr5r)) | 
 | Content Cell  | Content Cell  | | 
