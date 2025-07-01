@@ -39,7 +39,5 @@ vignettes/*.pdf
 .Renviron
 
 Plots_Composite.svg
-data/1_raw
-data/2_intermediate
-data/3_output
-data/4_display
+data/
+data.zip
