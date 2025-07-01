@@ -46,4 +46,7 @@ The following datasets are used as raw-input to the analysis:
 | Dataset  | File Name (data/1_raw/) | Source |
 | ------------- | ------------- | ------------- |
 | Building Footprints  | Building_Footprints_20250507.geojson  | [NYC Open Data](https://data.cityofnewyork.us/City-Government/Building-Footprints-Map-/jh45-qr5r) | 
-| Content Cell  | Content Cell  | | 
+| Tax Lots - 2020v3 | MapPLUTO.shp | [NYC Planning](https://www.nyc.gov/content/planning/pages/resources/datasets/mappluto-pluto-change) | 
+| Roads | geo_export_4443d165-7281-4b57-a1a1-f651c232b7ab.shp | [NYC Open Data](https://data.cityofnewyork.us/City-Government/Centerline/3mf9-qshr) | 
+| American Community Survey Data - 2018 5-year estimates at the census block group level (social vulnerability data)  | NYC_2018_ACS.geojson | [US Census Bureau](https://data.census.gov/) | 
+| Decennial Census data - 2010 (social vulnerability data)  | NYC_2010_decennial_census.geojson | [US Census Bureau](https://data.census.gov/) | 
