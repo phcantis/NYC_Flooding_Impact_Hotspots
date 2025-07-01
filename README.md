@@ -43,7 +43,7 @@ The analysis counts with 3 key steps, which are run sequentially to feed from th
 
 The following datasets are used as raw-input to the analysis:
 
-| First Header  | Second Header |
-| ------------- | ------------- |
-| Content Cell  | Content Cell  |
-| Content Cell  | Content Cell  |
+| Dataset  | File Name (data/1_raw/) | Source |
+| ------------- | ------------- | | 
+| Content Cell  | Content Cell  | | 
+| Content Cell  | Content Cell  | | 
