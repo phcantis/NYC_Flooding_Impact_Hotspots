@@ -59,4 +59,4 @@ The following datasets are used as raw-input to the analysis. Note that some of 
 | American Community Survey Data - 2018 5-year estimates at the census block group level (social vulnerability data)  | NYC_2018_ACS.geojson | [US Census Bureau](https://data.census.gov/) | 
 | Decennial Census data - 2010 at the census block level (social vulnerability data)  | NYC_2010_decennial_census.geojson | [US Census Bureau](https://data.census.gov/) | 
 
-* Baruch's GIS Data Repository requires credentials to access 2020 data, but similar datasets for bus routes and bus stops are available for 2019 at - https://archive.nyu.edu/handle/2451/60058
+ * Baruch's GIS Data Repository requires credentials to access 2020 data, but similar datasets for bus routes and bus stops are available for 2019 at - https://archive.nyu.edu/handle/2451/60058
