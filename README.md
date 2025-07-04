@@ -35,6 +35,10 @@ The analysis counts with 3 key steps, which are run sequentially to feed from th
 
 **1) Generate and compile exposure and vulnerability data into a database:** The script ```NYCF_report_CD_impacts.R``` is programmed to sequentially process raw input data by 1) calculating the distance to flooding hazards by each spatial feature under each different flooding scenario and 2) filtering data and calculating final indicators used in the analysis. The output of this script is a final database with all the data that is then used to produce different exposure indices / hotspot scores per risk attribute and category. Several nested sub-scripts are computed internally. Due to the potential time required to compute them all, these are commented out and their outputs are included in the data folder provided.
 
+### Distance Threshold for Exposure
+
+This study uses a 30m threshold to flag smaller spatial entities as exposed to flooding. This criteria can be easily updated, however, based on use case needs, at the beginning of the ```NYCF_report_CD_impacts.R``` script.
+
 **2) Index building:** The script ```NYCF_Index_Build.R``` will use the exposure and social vulnerability indicators generated and stored in a database to compute composite hotspot scores useful to depict which Community Districts rank higher for each of the risk criteria examined.
 
 **3) Plotting:** The scripts ```NYCF_Plotting_Schematic.R``` and ```NYCF_Plotting_Maps.R``` produce the bar plots and maps included in the manuscript and its Supplementary Materials.
