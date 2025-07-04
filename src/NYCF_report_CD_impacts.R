@@ -6,6 +6,10 @@
 # EXPOSURE ASSESSMENTS ARE CARRIED OUT BY MEASURING THE MINIMUM DISTANCE TO FLOODING OF EACH SPATIAL ENTITY, SO THAT A FILTERING APPROACH CAN BE USED LATER.
 # EXPOSURE METRICS ARE SUMMARIZED TO THE SCALE OF THE ANALYSIS - COMMUNITTY DISTRICTS IN NYC
 
+## in this study, we flag small spatial entities as exposed when they lay within a 30m radius of flooding. 
+## users interested in using a different radius may update the variable below (in meters)
+
+## exposure_criteria_meters <- 30
 
 ## we begin loading the libraries, functions, and variables that we will recurrently use
 
@@ -246,21 +250,21 @@ tax_lots_flooding_summary <- tax_lots_flooding %>%
             M.Total_residential_lots_15 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& m_d_f <= 15),
             M.Total_residential_lots_30 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& m_d_f <= 30),
             M.Total_residential_lots_50 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& m_d_f <= 50),
-            M.Total_residential_lots = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& m_d_f <= 30),
-            M.Total_basement_residential_lots = sum(LUseCat %in% "Residential" &  BSMT_RES == "Basement in residential lot"& m_d_f <= 30),
-            M.Total_mixed_comres_lots = sum(LUseCat %in% "Mixed residential and commercial"& m_d_f <= 30),
-            M.Total_commercial_lots = sum(LUseCat %in% "Commercial"& m_d_f <= 30),
-            M.Total_industrial_lots = sum(LUseCat %in% "Industrial & manufacturing"& m_d_f <= 30),
+            M.Total_residential_lots = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& m_d_f <= exposure_criteria_meters),
+            M.Total_basement_residential_lots = sum(LUseCat %in% "Residential" &  BSMT_RES == "Basement in residential lot"& m_d_f <= exposure_criteria_meters),
+            M.Total_mixed_comres_lots = sum(LUseCat %in% "Mixed residential and commercial"& m_d_f <= exposure_criteria_meters),
+            M.Total_commercial_lots = sum(LUseCat %in% "Commercial"& m_d_f <= exposure_criteria_meters),
+            M.Total_industrial_lots = sum(LUseCat %in% "Industrial & manufacturing"& m_d_f <= exposure_criteria_meters),
             E.Total_residential_lots_0 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& e_d_f <= 0),
             E.Total_residential_lots_5 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& e_d_f <= 5),
             E.Total_residential_lots_15 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& e_d_f <= 15),
             E.Total_residential_lots_30 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& e_d_f <= 30),
             E.Total_residential_lots_50 = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& e_d_f <= 50),
-            E.Total_residential_lots = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& e_d_f <= 30),
-            E.Total_basement_residential_lots = sum(LUseCat %in% "Residential" &  BSMT_RES == "Basement in residential lot"& e_d_f <= 30),
-            E.Total_mixed_comres_lots = sum(LUseCat %in% "Mixed residential and commercial"& e_d_f <= 30),
-            E.Total_commercial_lots = sum(LUseCat %in% "Commercial"& e_d_f <= 30),
-            E.Total_industrial_lots = sum(LUseCat %in% "Industrial & manufacturing"& e_d_f <= 30)) %>%
+            E.Total_residential_lots = sum(LUseCat %in% "Residential" &  BSMT_RES != "Basement in residential lot"& e_d_f <= exposure_criteria_meters),
+            E.Total_basement_residential_lots = sum(LUseCat %in% "Residential" &  BSMT_RES == "Basement in residential lot"& e_d_f <= exposure_criteria_meters),
+            E.Total_mixed_comres_lots = sum(LUseCat %in% "Mixed residential and commercial"& e_d_f <= exposure_criteria_meters),
+            E.Total_commercial_lots = sum(LUseCat %in% "Commercial"& e_d_f <= exposure_criteria_meters),
+            E.Total_industrial_lots = sum(LUseCat %in% "Industrial & manufacturing"& e_d_f <= exposure_criteria_meters)) %>%
   mutate(M.PCT_residential_lots = 100 * M.Total_residential_lots / Total_residential_lots,
          M.PCT_basement_residential_lots = 100 * M.Total_basement_residential_lots / Total_basement_residential_lots,
          M.PCT_mixed_comres_lots = 100 * M.Total_mixed_comres_lots / Total_mixed_comres_lots,
@@ -330,8 +334,8 @@ for(facility_cat in facility_categories){
     sliced_catfac_CD <- sliced_catfac[sliced_catfac$boro_cd == comdist,]
     
     total_nr_facility <- nrow(sliced_catfac_CD)
-    M.Flooded_nr_facility <-nrow(sliced_catfac_CD[sliced_catfac_CD$m_d_f <= 30,])
-    E.Flooded_nr_facility <-nrow(sliced_catfac_CD[sliced_catfac_CD$e_d_f <= 30,])
+    M.Flooded_nr_facility <-nrow(sliced_catfac_CD[sliced_catfac_CD$m_d_f <= exposure_criteria_meters,])
+    E.Flooded_nr_facility <-nrow(sliced_catfac_CD[sliced_catfac_CD$e_d_f <= exposure_criteria_meters,])
     M.Flooded_PCT_facility <- 100 * M.Flooded_nr_facility  / total_nr_facility
     E.Flooded_PCT_facility <- 100 * E.Flooded_nr_facility  / total_nr_facility
     
@@ -362,19 +366,19 @@ for(facility_subgrp in facility_subgroups){
   sliced_facsbgrp <- facilities_data_points[facilities_data_points$FACSUBGRP == facility_subgrp,]
   
   facilities_summary_citywide[facilities_summary_citywide$SUBGRP == facility_subgrp, "Total"] <- nrow(sliced_facsbgrp)
-  facilities_summary_citywide[facilities_summary_citywide$SUBGRP == facility_subgrp, "M.Total"] <- nrow(sliced_facsbgrp[sliced_facsbgrp$m_d_f <= 30,])
-  facilities_summary_citywide[facilities_summary_citywide$SUBGRP == facility_subgrp, "E.Total"] <- nrow(sliced_facsbgrp[sliced_facsbgrp$e_d_f <= 30,])
+  facilities_summary_citywide[facilities_summary_citywide$SUBGRP == facility_subgrp, "M.Total"] <- nrow(sliced_facsbgrp[sliced_facsbgrp$m_d_f <= exposure_criteria_meters,])
+  facilities_summary_citywide[facilities_summary_citywide$SUBGRP == facility_subgrp, "E.Total"] <- nrow(sliced_facsbgrp[sliced_facsbgrp$e_d_f <= exposure_criteria_meters,])
   
-  facilities_summary_citywide[facilities_summary_citywide$SUBGRP == facility_subgrp, "M.PCT"] <- 100 * nrow(sliced_facsbgrp[sliced_facsbgrp$m_d_f <= 30,]) / nrow(sliced_facsbgrp)
-  facilities_summary_citywide[facilities_summary_citywide$SUBGRP == facility_subgrp, "E.PCT"] <- 100 * nrow(sliced_facsbgrp[sliced_facsbgrp$e_d_f <= 30,]) / nrow(sliced_facsbgrp)
+  facilities_summary_citywide[facilities_summary_citywide$SUBGRP == facility_subgrp, "M.PCT"] <- 100 * nrow(sliced_facsbgrp[sliced_facsbgrp$m_d_f <= exposure_criteria_meters,]) / nrow(sliced_facsbgrp)
+  facilities_summary_citywide[facilities_summary_citywide$SUBGRP == facility_subgrp, "E.PCT"] <- 100 * nrow(sliced_facsbgrp[sliced_facsbgrp$e_d_f <= exposure_criteria_meters,]) / nrow(sliced_facsbgrp)
   
   for(comdist in final_table$Geography){
     
     sliced_facsbgrp_CD <- sliced_facsbgrp[sliced_facsbgrp$boro_cd == comdist,]
     
     total_nr_subgrp <- nrow(sliced_facsbgrp_CD)
-    M.Flooded_nr_subgrp <-nrow(sliced_facsbgrp_CD[sliced_facsbgrp_CD$m_d_f <= 30,])
-    E.Flooded_nr_subgrp <-nrow(sliced_facsbgrp_CD[sliced_facsbgrp_CD$e_d_f <= 30,])
+    M.Flooded_nr_subgrp <-nrow(sliced_facsbgrp_CD[sliced_facsbgrp_CD$m_d_f <= exposure_criteria_meters,])
+    E.Flooded_nr_subgrp <-nrow(sliced_facsbgrp_CD[sliced_facsbgrp_CD$e_d_f <= exposure_criteria_meters,])
     M.Flooded_PCT_facility <- 100 * M.Flooded_nr_subgrp  / total_nr_subgrp
     E.Flooded_PCT_facility <- 100 * E.Flooded_nr_subgrp  / total_nr_subgrp
     
@@ -402,8 +406,8 @@ bus_stops_summary <- st_read("data/2_intermediate/bus_stops_flooding.shp") %>%
   st_drop_geometry() %>%
   group_by(boro_cd) %>%
   summarize(Total_bus_stops = n(),
-            M.Total_bus_stops = sum(m_d_f <= 30),
-            E.Total_bus_stops = sum(e_d_f <= 30)) %>%
+            M.Total_bus_stops = sum(m_d_f <= exposure_criteria_meters),
+            E.Total_bus_stops = sum(e_d_f <= exposure_criteria_meters)) %>%
   mutate(M.PCT_bus_stops = 100 * M.Total_bus_stops / Total_bus_stops,
          E.PCT_bus_stops = 100 * E.Total_bus_stops / Total_bus_stops)
   
@@ -411,8 +415,8 @@ subway_entrances_summary <- st_read("data/2_intermediate/subway_entrances_floodi
   st_drop_geometry() %>%
   group_by(boro_cd) %>%
   summarize(Total_subway_stops = n(),
-            M.Total_subway_stops = sum(m_d_f <= 30),
-            E.Total_subway_stops = sum(e_d_f <= 30)) %>%
+            M.Total_subway_stops = sum(m_d_f <= exposure_criteria_meters),
+            E.Total_subway_stops = sum(e_d_f <= exposure_criteria_meters)) %>%
   mutate(M.PCT_subway_stops = 100 * M.Total_subway_stops / Total_subway_stops,
          E.PCT_subway_stops = 100 * E.Total_subway_stops / Total_subway_stops)
 
