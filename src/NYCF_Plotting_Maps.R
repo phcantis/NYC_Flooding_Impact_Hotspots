@@ -551,7 +551,7 @@ frame <- ggarrange(Map.P_K12,
                    Map.Legend_LUSE,
                    nrow = 3, ncol = 2,
                    common.legend = FALSE) %>%
-  annotate_figure(top = text_grob("\n Impact of Flooding on Welfare Facilities Per Community District \n Extreme Scenario \n", 
+  annotate_figure(top = text_grob("\n Impact of Flooding on Education Facilities Per Community District \n Extreme Scenario \n", 
                                   color = "black", face = "bold", size = 50))
 
 frame %>% ggexport(filename = "data/4_display/maps/extreme/maps_ED.png", 
