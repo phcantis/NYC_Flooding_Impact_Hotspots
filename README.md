@@ -43,7 +43,7 @@ The analysis counts with 3 key steps, which are run sequentially to feed from th
 
 ## 📄 Data References
  
-The following datasets are used as raw-input to the analysis. Note that some of the links provided lead to updated versions of the datasets. 
+The following datasets are used as raw-input to the analysis. Note that some of the links provided lead to updated versions of the datasets, which may differ from the datasets included in the data/1_raw/ folder. 
 
 | Dataset  | File Name (data/1_raw/) | Source |
 | ------------- | ------------- | ------------- |
